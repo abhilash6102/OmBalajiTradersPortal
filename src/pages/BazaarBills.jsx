@@ -192,10 +192,15 @@ export default function BazaarBills() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this bill record? This action cannot be undone.")) return;
-    try { await fetch(`http://localhost:5000/api/bazaarbills/${id}`, { method: "DELETE" }); load(); } catch (err) { console.error("Delete failed", err); }
-  };
+
+const handleDelete = async (id) => {
+  try { 
+    await fetch(`${API_BASE_URL}/bazaarbills/${id}`, { method: "DELETE" }); 
+    load(); 
+  } catch (err) { 
+    console.error("Delete failed", err); 
+  }
+};
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
