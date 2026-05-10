@@ -1,0 +1,85 @@
+{
+  "name": "BazaarPayment",
+  "type": "object",
+  "properties": {
+    "sl_no": {
+      "type": "number",
+      "title": "Serial Number"
+    },
+    "kanta_entry_id": {
+      "type": "string",
+      "title": "Kanta Entry ID (reference)"
+    },
+    "trader_name": {
+      "type": "string",
+      "title": "Trader Name"
+    },
+    "farmer_name": {
+      "type": "string",
+      "title": "Farmer Name"
+    },
+    "village": {
+      "type": "string",
+      "title": "Village"
+    },
+    "crop_type": {
+      "type": "string",
+      "title": "Crop Type"
+    },
+    "crop_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Crop Purchase Date"
+    },
+    "expected_payment_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Expected Payment Date (+20 days)"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Amount (\u20b9)"
+    },
+    "bank": {
+      "type": "string",
+      "title": "Bank",
+      "enum": [
+        "sbi",
+        "icici",
+        "union",
+        "canara",
+        "other"
+      ],
+      "enumNames": [
+        "SBI",
+        "ICICI",
+        "Union Bank",
+        "Canara Bank",
+        "Other"
+      ]
+    },
+    "is_credited": {
+      "type": "boolean",
+      "title": "Amount Credited?",
+      "default": false
+    },
+    "credited_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Actual Credited Date"
+    },
+    "reference_no": {
+      "type": "string",
+      "title": "Reference / UTR Number"
+    },
+    "remarks": {
+      "type": "string",
+      "title": "Remarks"
+    }
+  },
+  "required": [
+    "trader_name",
+    "crop_date",
+    "amount"
+  ]
+}

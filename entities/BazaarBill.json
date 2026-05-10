@@ -1,0 +1,56 @@
+{
+  "name": "BazaarBill",
+  "type": "object",
+  "properties": {
+    "bill_no": {
+      "type": "string",
+      "title": "Bill Number"
+    },
+    "trader_name": {
+      "type": "string",
+      "title": "Trader Name"
+    },
+    "crop_type": {
+      "type": "string",
+      "title": "Crop Type"
+    },
+    "bag_type": {
+      "type": "string",
+      "title": "Bag Type"
+    },
+    "bags": {
+      "type": "number",
+      "title": "No. of Bags"
+    },
+    "quintals": {
+      "type": "number",
+      "title": "Quintals"
+    },
+    "kgs": {
+      "type": "number",
+      "title": "Kgs"
+    },
+    "price_per_unit": {
+      "type": "number",
+      "title": "Price per Unit (\u20b9)"
+    },
+    "net_amount": {
+      "type": "number",
+      "title": "Net Amount (\u20b9)"
+    },
+    "total_amount": {
+      "type": "number",
+      "title": "Total Amount (\u20b9)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    }
+  },
+  "required": [
+    "bill_no",
+    "trader_name",
+    "date"
+  ]
+}

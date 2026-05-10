@@ -1,0 +1,45 @@
+{
+  "name": "JamaKarchuEntry",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "title": "Entry Type",
+      "enum": [
+        "jama",
+        "karchu"
+      ],
+      "enumNames": [
+        "Jama (Credit - Trader)",
+        "Karchu (Debit - Farmer Payment)"
+      ]
+    },
+    "party_name": {
+      "type": "string",
+      "title": "Party Name"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Amount (\u20b9)"
+    },
+    "commission": {
+      "type": "number",
+      "title": "Commission (\u20b9)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    }
+  },
+  "required": [
+    "type",
+    "party_name",
+    "amount",
+    "date"
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "name": "TakPatti",
+  "type": "object",
+  "properties": {
+    "sl_no": {
+      "type": "number",
+      "title": "Serial Number"
+    },
+    "farmer_name": {
+      "type": "string",
+      "title": "Farmer Name"
+    },
+    "village": {
+      "type": "string",
+      "title": "Village"
+    },
+    "trader_name": {
+      "type": "string",
+      "title": "Trader Name"
+    },
+    "crop_type": {
+      "type": "string",
+      "title": "Crop Type"
+    },
+    "bag_type": {
+      "type": "string",
+      "title": "Bag Type"
+    },
+    "bags": {
+      "type": "number",
+      "title": "No. of Bags"
+    },
+    "kgs": {
+      "type": "number",
+      "title": "Extra Kgs (or Total Kgs for Cotton/Castor Seeds)"
+    },
+    "quintals": {
+      "type": "number",
+      "title": "Quintals"
+    },
+    "leftover_kgs": {
+      "type": "number",
+      "title": "Leftover Kgs"
+    },
+    "price_per_unit": {
+      "type": "number",
+      "title": "Price per Unit (\u20b9)"
+    },
+    "sum_amount": {
+      "type": "number",
+      "title": "Sum Amount (\u20b9)"
+    },
+    "commission": {
+      "type": "number",
+      "title": "Commission (\u20b9)"
+    },
+    "hamali": {
+      "type": "number",
+      "title": "Hamali (\u20b9)"
+    },
+    "dharvay": {
+      "type": "number",
+      "title": "Dharvay (\u20b9)"
+    },
+    "chata": {
+      "type": "number",
+      "title": "Chata (\u20b9)"
+    },
+    "net_payable": {
+      "type": "number",
+      "title": "Net Payable (\u20b9)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    }
+  },
+  "required": [
+    "farmer_name",
+    "village",
+    "trader_name",
+    "date"
+  ]
+}

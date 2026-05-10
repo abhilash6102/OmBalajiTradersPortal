@@ -1,0 +1,26 @@
+{
+  "name": "Trader",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Trader Name"
+    },
+    "bazaar": {
+      "type": "string",
+      "title": "Bazaar (Market Location)"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone Number"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    }
+  },
+  "required": [
+    "name",
+    "bazaar"
+  ]
+}

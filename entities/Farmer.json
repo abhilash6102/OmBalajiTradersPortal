@@ -1,0 +1,30 @@
+{
+  "name": "Farmer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Farmer Name"
+    },
+    "village": {
+      "type": "string",
+      "title": "Village"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone Number"
+    },
+    "bank_account": {
+      "type": "string",
+      "title": "Bank Account Number"
+    },
+    "ifsc_code": {
+      "type": "string",
+      "title": "IFSC Code"
+    }
+  },
+  "required": [
+    "name",
+    "village"
+  ]
+}

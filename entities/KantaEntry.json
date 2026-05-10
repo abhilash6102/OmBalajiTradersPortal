@@ -1,0 +1,58 @@
+{
+  "name": "KantaEntry",
+  "type": "object",
+  "properties": {
+    "sl_no": {
+      "type": "number",
+      "title": "Serial Number"
+    },
+    "farmer_name": {
+      "type": "string",
+      "title": "Farmer Name"
+    },
+    "village": {
+      "type": "string",
+      "title": "Village"
+    },
+    "crop_type": {
+      "type": "string",
+      "title": "Crop Type"
+    },
+    "bags": {
+      "type": "number",
+      "title": "No. of Bags"
+    },
+    "bag_type": {
+      "type": "string",
+      "title": "Bag Type (Weight)"
+    },
+    "price_per_unit": {
+      "type": "number",
+      "title": "Price per Unit (\u20b9)"
+    },
+    "trader_name": {
+      "type": "string",
+      "title": "Trader Name (Buyer)"
+    },
+    "bazaar": {
+      "type": "string",
+      "title": "Bazaar Bags"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    },
+    "total_amount": {
+      "type": "number",
+      "title": "Total Amount (\u20b9)"
+    }
+  },
+  "required": [
+    "farmer_name",
+    "village",
+    "crop_type",
+    "trader_name",
+    "date"
+  ]
+}

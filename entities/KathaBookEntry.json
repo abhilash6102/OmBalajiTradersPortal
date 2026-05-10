@@ -1,0 +1,62 @@
+{
+  "name": "KathaBookEntry",
+  "type": "object",
+  "properties": {
+    "trader_name": {
+      "type": "string",
+      "title": "Trader Name"
+    },
+    "type": {
+      "type": "string",
+      "title": "Entry Type",
+      "enum": [
+        "debit",
+        "credit"
+      ],
+      "enumNames": [
+        "Debit (Crop Purchase)",
+        "Credit (Payment Received)"
+      ]
+    },
+    "crop_type": {
+      "type": "string",
+      "title": "Crop Type"
+    },
+    "net_weight": {
+      "type": "number",
+      "title": "Net Weight (Quintals)"
+    },
+    "price_per_unit": {
+      "type": "number",
+      "title": "Price per Unit (\u20b9)"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Amount (\u20b9)"
+    },
+    "bazaar_bill_ref": {
+      "type": "string",
+      "title": "Bazaar Bill Reference"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Due Date"
+    },
+    "remarks": {
+      "type": "string",
+      "title": "Remarks"
+    }
+  },
+  "required": [
+    "trader_name",
+    "type",
+    "amount",
+    "date"
+  ]
+}
