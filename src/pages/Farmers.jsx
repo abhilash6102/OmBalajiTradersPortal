@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Plus, Trash2, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,18 +31,44 @@ export default function Farmers() {
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
-    const data = await base44.entities.Farmer.list("-created_date", 200);
-    setFarmers(data);
+    try {
+      const res = await fetch("http://localhost:5000/api/farmers");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        // Sort newest first (assuming MongoDB _id or a date field, sorting backwards)
+        setFarmers(data.reverse()); 
+      }
+    } catch (err) {
+      console.error("Failed to load farmers", err);
+    }
   };
+
   useEffect(() => { load(); }, []);
 
   const handleSubmit = async (data) => {
     setLoading(true);
-    if (editItem) {
-      await base44.entities.Farmer.update(editItem.id, data);
-    } else {
-      await base44.entities.Farmer.create(data);
+    try {
+      if (editItem) {
+        // 🔥 UPDATE
+        const updateId = editItem._id || editItem.id;
+        await fetch(`http://localhost:5000/api/farmers/${updateId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      } else {
+        // 🔥 CREATE
+        await fetch("http://localhost:5000/api/farmers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      }
+    } catch (err) {
+      console.error("Save failed", err);
+      alert("Failed to save farmer.");
     }
+    
     setLoading(false);
     setModalOpen(false);
     setEditItem(null);
@@ -52,8 +77,13 @@ export default function Farmers() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this farmer record? This action cannot be undone.")) return;
-    await base44.entities.Farmer.delete(id);
-    load();
+    try {
+      // 🔥 DELETE
+      await fetch(`http://localhost:5000/api/farmers/${id}`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
   };
 
   const filtered = farmers.filter(f =>
@@ -62,11 +92,15 @@ export default function Farmers() {
 
   const tableColumns = columns.map(col => {
     if (col.key === "actions") {
-      return { ...col, render: (row) => (
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      )};
+      return { 
+        ...col, 
+        render: (row) => (
+          // Safely target MongoDB _id
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )
+      };
     }
     return col;
   });
@@ -86,7 +120,11 @@ export default function Farmers() {
         </div>
       </div>
 
-      <DataTable columns={tableColumns} data={filtered} onRowClick={(row) => { setEditItem(row); setModalOpen(true); }} />
+      <DataTable 
+        columns={tableColumns} 
+        data={filtered} 
+        onRowClick={(row) => { setEditItem(row); setModalOpen(true); }} 
+      />
 
       <FormModal
         open={modalOpen}

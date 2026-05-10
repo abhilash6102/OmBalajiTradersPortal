@@ -1,11 +1,14 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { fileURLToPath, URL } from 'url';
 
-// https://vite.dev/config/
 export default defineConfig({
-  base: './', // 🔥 Fixes the blank white screen on GitHub Pages
-  logLevel: 'error', // Suppress warnings, only show errors
-  plugins: [
-    react() // 🔥 Pure React only! Base44 completely removed.
-  ]
+  base: './', 
+  logLevel: 'error', 
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
 });

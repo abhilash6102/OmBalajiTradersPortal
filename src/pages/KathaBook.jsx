@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Plus, Trash2, Search, X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +10,18 @@ import DataTable from "../components/DataTable";
 import StatCard from "../components/StatCard";
 import { BookOpen, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
-const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia", "Cotton"];
+const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia", "Cotton", "Castor Seeds"];
 
 const EMPTY_FORM = {
   date: "", trader_name: "", type: "", crop_type: "", net_weight: "",
   price_per_unit: "", amount: "", bazaar_bill_ref: "", due_date: "", remarks: ""
+};
+
+// 🔥 BULLETPROOF 2-DECIMAL HELPER (Consistent with your other modules)
+const formatMoney = (num) => {
+  const parsed = Math.round(Number(num || 0));
+  if (isNaN(parsed)) return "0.00";
+  return parsed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 function toNum(v) {
@@ -34,7 +40,7 @@ const columns = [
   )},
   { key: "crop_type", label: "Crop" },
   { key: "net_weight", label: "Wt (Q)", cellClassName: "font-mono" },
-  { key: "amount", label: "Amount", cellClassName: "font-mono font-semibold", render: (r) => `₹${(r.amount || 0).toFixed(2)}` },
+  { key: "amount", label: "Amount", cellClassName: "font-mono font-semibold", render: (r) => `₹${formatMoney(r.amount)}` },
   { key: "due_date", label: "Due Date" },
   { key: "bazaar_bill_ref", label: "Bill Ref" },
   { key: "actions", label: "" },
@@ -49,9 +55,18 @@ export default function KathaBook() {
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
-    const data = await base44.entities.KathaBookEntry.list("-created_date", 200);
-    setEntries(data);
+    try {
+      const res = await fetch("http://localhost:5000/api/kathabook");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        // Sort newest first
+        setEntries(data.reverse()); 
+      }
+    } catch (err) {
+      console.error("Failed to load Katha Book entries", err);
+    }
   };
+  
   useEffect(() => { load(); }, []);
 
   const setField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
@@ -59,17 +74,36 @@ export default function KathaBook() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
     const data = {
       ...form,
       net_weight: toNum(form.net_weight),
       price_per_unit: toNum(form.price_per_unit),
       amount: toNum(form.amount),
     };
-    if (editId) {
-      await base44.entities.KathaBookEntry.update(editId, data);
-    } else {
-      await base44.entities.KathaBookEntry.create(data);
+
+    try {
+      if (editId) {
+        // 🔥 UPDATE
+        const updateId = editId;
+        await fetch(`http://localhost:5000/api/kathabook/${updateId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      } else {
+        // 🔥 CREATE
+        await fetch("http://localhost:5000/api/kathabook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      }
+    } catch (err) {
+      console.error("Save failed", err);
+      alert("Failed to save entry.");
     }
+    
     setLoading(false);
     setForm(EMPTY_FORM);
     setEditId(null);
@@ -90,32 +124,42 @@ export default function KathaBook() {
       due_date: row.due_date ?? "",
       remarks: row.remarks ?? "",
     });
-    setEditId(row.id);
+    // 🔥 Safely handle MongoDB _id
+    setEditId(row._id || row.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
-    await base44.entities.KathaBookEntry.delete(id);
-    load();
+    try {
+      // 🔥 DELETE
+      await fetch(`http://localhost:5000/api/kathabook/${id}`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
   };
 
   const filtered = entries.filter(e =>
     !search || [e.trader_name, e.crop_type, e.bazaar_bill_ref].some(f => f?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const totalDebit = filtered.filter(e => e.type === "debit").reduce((s, e) => s + (e.amount || 0), 0);
-  const totalCredit = filtered.filter(e => e.type === "credit").reduce((s, e) => s + (e.amount || 0), 0);
+  const totalDebit = filtered.filter(e => e.type === "debit").reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const totalCredit = filtered.filter(e => e.type === "credit").reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const outstanding = totalDebit - totalCredit;
 
   const tableColumns = columns.map(col => {
     if (col.key === "actions") {
-      return { ...col, render: (row) => (
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      )};
+      return { 
+        ...col, 
+        render: (row) => (
+          // 🔥 Safely target MongoDB _id
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )
+      };
     }
     return col;
   });
@@ -202,19 +246,21 @@ export default function KathaBook() {
       {!showForm && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <StatCard title="Total Debit" value={`₹${totalDebit.toFixed(2)}`} icon={ArrowUpRight} />
-            <StatCard title="Total Credit" value={`₹${totalCredit.toFixed(2)}`} icon={ArrowDownLeft} />
-            <StatCard title="Outstanding" value={`₹${outstanding.toFixed(2)}`} icon={BookOpen} />
+            <StatCard title="Total Debit" value={`₹${formatMoney(totalDebit)}`} icon={ArrowUpRight} className="border-red-200 bg-red-50/30 text-red-800" />
+            <StatCard title="Total Credit" value={`₹${formatMoney(totalCredit)}`} icon={ArrowDownLeft} className="border-green-200 bg-green-50/30 text-green-800" />
+            <StatCard title="Outstanding" value={`₹${formatMoney(outstanding)}`} icon={BookOpen} className="border-blue-200 bg-blue-50/30 text-blue-800" />
           </div>
 
           <div className="mb-4">
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Search trader, crop, or bill ref..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
           </div>
 
-          <DataTable columns={tableColumns} data={filtered} onRowClick={handleEdit} />
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            <DataTable columns={tableColumns} data={filtered} onRowClick={handleEdit} />
+          </div>
         </>
       )}
     </div>

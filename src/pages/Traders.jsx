@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Plus, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,18 +29,44 @@ export default function Traders() {
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
-    const data = await base44.entities.Trader.list("-created_date", 200);
-    setTraders(data);
+    try {
+      const res = await fetch("http://localhost:5000/api/traders");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        // Sort newest first
+        setTraders(data.reverse()); 
+      }
+    } catch (err) {
+      console.error("Failed to load traders", err);
+    }
   };
+
   useEffect(() => { load(); }, []);
 
   const handleSubmit = async (data) => {
     setLoading(true);
-    if (editItem) {
-      await base44.entities.Trader.update(editItem.id, data);
-    } else {
-      await base44.entities.Trader.create(data);
+    try {
+      if (editItem) {
+        // 🔥 UPDATE
+        const updateId = editItem._id || editItem.id;
+        await fetch(`http://localhost:5000/api/traders/${updateId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      } else {
+        // 🔥 CREATE
+        await fetch("http://localhost:5000/api/traders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+      }
+    } catch (err) {
+      console.error("Save failed", err);
+      alert("Failed to save trader.");
     }
+    
     setLoading(false);
     setModalOpen(false);
     setEditItem(null);
@@ -50,8 +75,13 @@ export default function Traders() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this trader record? This action cannot be undone.")) return;
-    await base44.entities.Trader.delete(id);
-    load();
+    try {
+      // 🔥 DELETE
+      await fetch(`http://localhost:5000/api/traders/${id}`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
   };
 
   const filtered = traders.filter(t =>
@@ -60,11 +90,15 @@ export default function Traders() {
 
   const tableColumns = columns.map(col => {
     if (col.key === "actions") {
-      return { ...col, render: (row) => (
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      )};
+      return { 
+        ...col, 
+        render: (row) => (
+          // 🔥 Safely target MongoDB _id
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )
+      };
     }
     return col;
   });
@@ -84,7 +118,11 @@ export default function Traders() {
         </div>
       </div>
 
-      <DataTable columns={tableColumns} data={filtered} onRowClick={(row) => { setEditItem(row); setModalOpen(true); }} />
+      <DataTable 
+        columns={tableColumns} 
+        data={filtered} 
+        onRowClick={(row) => { setEditItem(row); setModalOpen(true); }} 
+      />
 
       <FormModal
         open={modalOpen}
