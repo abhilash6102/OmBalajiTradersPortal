@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, X, Save, Search, ArrowDownLeft, ArrowUpRight, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export default function Padam() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/padam");
+      const res = await fetch(`${API_BASE_URL}/padam`);
       const data = await res.json();
       if (Array.isArray(data)) {
         data.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -79,7 +80,7 @@ export default function Padam() {
 
   const getNextSlNo = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/padam");
+      const res = await fetch(`${API_BASE_URL}/padam`);
       const data = await res.json();
       const maxSl = data.reduce((max, item) => Math.max(max, Number(item.sl_no || 0)), 0);
       return maxSl + 1;
@@ -119,9 +120,9 @@ export default function Padam() {
       };
 
       if (editId) {
-        await fetch(`http://localhost:5000/api/padam/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        await fetch(`${API_BASE_URL}/padam/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       } else {
-        await fetch("http://localhost:5000/api/padam", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       }
 
       setLoading(false);
@@ -150,7 +151,7 @@ export default function Padam() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this entry?")) return;
-    try { await fetch(`http://localhost:5000/api/padam/${id}`, { method: "DELETE" }); load(); } catch (err) { console.error("Delete failed", err); }
+    try { await fetch(`${API_BASE_URL}/padam/${id}`, { method: "DELETE" }); load(); } catch (err) { console.error("Delete failed", err); }
   };
 
   const filtered = entries.filter(e =>

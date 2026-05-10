@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export default function Farmers() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/farmers");
+      const res = await fetch(`${API_BASE_URL}/farmers`);
       const data = await res.json();
       if (Array.isArray(data)) {
         // Sort newest first (assuming MongoDB _id or a date field, sorting backwards)
@@ -51,14 +52,14 @@ export default function Farmers() {
       if (editItem) {
         // 🔥 UPDATE
         const updateId = editItem._id || editItem.id;
-        await fetch(`http://localhost:5000/api/farmers/${updateId}`, {
+        await fetch(`${API_BASE_URL}/farmers/${updateId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
       } else {
         // 🔥 CREATE
-        await fetch("http://localhost:5000/api/farmers", {
+        await fetch(`${API_BASE_URL}/farmers`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -79,7 +80,7 @@ export default function Farmers() {
     if (!window.confirm("Are you sure you want to delete this farmer record? This action cannot be undone.")) return;
     try {
       // 🔥 DELETE
-      await fetch(`http://localhost:5000/api/farmers/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/farmers/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
       console.error("Delete failed", err);

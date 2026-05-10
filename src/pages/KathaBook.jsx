@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Search, X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,7 @@ export default function KathaBook() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/kathabook");
+      const res = await fetch(`${API_BASE_URL}/kathabook`);
       const data = await res.json();
       if (Array.isArray(data)) {
         // Sort newest first
@@ -86,14 +87,14 @@ export default function KathaBook() {
       if (editId) {
         // 🔥 UPDATE
         const updateId = editId;
-        await fetch(`http://localhost:5000/api/kathabook/${updateId}`, {
+        await fetch(`${API_BASE_URL}/kathabook/${updateId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
       } else {
         // 🔥 CREATE
-        await fetch("http://localhost:5000/api/kathabook", {
+        await fetch(`${API_BASE_URL}/kathabook`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -134,7 +135,7 @@ export default function KathaBook() {
     if (!window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
     try {
       // 🔥 DELETE
-      await fetch(`http://localhost:5000/api/kathabook/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/kathabook/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
       console.error("Delete failed", err);

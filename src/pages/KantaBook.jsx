@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, X, Save, ChevronDown, ChevronRight, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export default function KantaBook() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/kanta");
+      const res = await fetch(`${API_BASE_URL}/kanta`);
       const data = await res.json();
       setEntries(data);
     } catch (err) { console.error("Failed to load Kanta Book", err); }
@@ -74,7 +75,7 @@ export default function KantaBook() {
 
   const getNextBookAndSlNo = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/kanta");
+      const res = await fetch(`${API_BASE_URL}/kanta`);
       const data = await res.json();
       if (!data || data.length === 0) return { book_no: 1, sl_no: 1 };
 
@@ -138,13 +139,13 @@ export default function KantaBook() {
       const leftoverKgs = roundToInt(totalKg % 100);
 
       if (editId) {
-        await fetch(`http://localhost:5000/api/kanta/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData) });
+        await fetch(`${API_BASE_URL}/kanta/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData) });
       } else {
-        await fetch("http://localhost:5000/api/kanta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData) });
+        await fetch(`${API_BASE_URL}/kanta`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData) });
       }
 
       if (finalSlNo != null) {
-        const takRes = await fetch("http://localhost:5000/api/takpatti");
+        const takRes = await fetch(`${API_BASE_URL}/takpatti`);
         const takPattiAll = await takRes.json();
         const matchingTP = takPattiAll.find(tp => Number(tp.sl_no) === Number(finalSlNo) && Number(tp.book_no || 1) === Number(finalBookNo));
         const tpData = {
@@ -154,19 +155,19 @@ export default function KantaBook() {
           net_payable: netPayable, quintals, leftover_kgs: leftoverKgs,
         };
         if (matchingTP) {
-          await fetch(`http://localhost:5000/api/takpatti/${matchingTP._id || matchingTP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData) });
+          await fetch(`${API_BASE_URL}/takpatti/${matchingTP._id || matchingTP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData) });
         } else {
-          await fetch("http://localhost:5000/api/takpatti", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData) });
+          await fetch(`${API_BASE_URL}/takpatti`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData) });
         }
 
-        const padamRes1 = await fetch("http://localhost:5000/api/padam");
+        const padamRes1 = await fetch(`${API_BASE_URL}/padam`);
         const padamAll1 = await padamRes1.json();
         const existingCredit = padamAll1.find(p => p.type === "credit" && Number(p.sl_no) === Number(finalSlNo) && Number(p.book_no || 1) === Number(finalBookNo));
         const creditData = { book_no: finalBookNo, sl_no: finalSlNo, date: form.date, type: "credit", party_name: form.farmer_name, village: form.village, amount: sumAmount, commission, hamali, dharvay, chata, net_amount: netPayable };
         if (existingCredit) {
-           await fetch(`http://localhost:5000/api/padam/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
+           await fetch(`${API_BASE_URL}/padam/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
         } else {
-           await fetch("http://localhost:5000/api/padam", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
+           await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
         }
       }
 
@@ -184,7 +185,7 @@ export default function KantaBook() {
         const bLeftoverKgs = roundToInt(bazaarTotalKg % 100);
         const bbNet = roundToInt((bazaarTotalKg / 100) * price);
 
-        const bazaarRes = await fetch("http://localhost:5000/api/bazaarbills");
+        const bazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
         const bazaarAll = await bazaarRes.json();
         
         let uBook = 1, uBill = 1;
@@ -219,12 +220,12 @@ export default function KantaBook() {
         
         const existingBBRecord = bazaarAll.find(b => b.kanta_sl_no === finalSlNo);
         if (existingBBRecord) {
-            await fetch(`http://localhost:5000/api/bazaarbills/${existingBBRecord._id || existingBBRecord.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
+            await fetch(`${API_BASE_URL}/bazaarbills/${existingBBRecord._id || existingBBRecord.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
         } else if (bazaarBags > 0 || bLeftoverKgs > 0) {
-            await fetch("http://localhost:5000/api/bazaarbills", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
+            await fetch(`${API_BASE_URL}/bazaarbills`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
         }
 
-        const freshBazaarRes = await fetch("http://localhost:5000/api/bazaarbills");
+        const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
         const freshBazaar = await freshBazaarRes.json();
 
         const groupedBP = {};
@@ -235,19 +236,19 @@ export default function KantaBook() {
              groupedBP[key].amount += roundToInt(b.sub_total || b.net_amount || b.total_amount || 0);
         });
 
-        const bpRes = await fetch("http://localhost:5000/api/bazaarpayments");
+        const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
         const bpAll = await bpRes.json();
 
         for (const [key, data] of Object.entries(groupedBP)) {
             const existingBP = bpAll.find(bp => bp.trader_name === data.trader_name && bp.crop_type === data.crop_type && bp.crop_date === data.date);
             if (existingBP) {
                 if (!existingBP.is_credited && existingBP.amount !== data.amount) {
-                    await fetch(`http://localhost:5000/api/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: data.amount, book_no: data.book_no, sl_no: data.bill_no }) });
+                    await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: data.amount, book_no: data.book_no, sl_no: data.bill_no }) });
                 }
             } else {
                 const expDate = new Date(data.date); 
                 expDate.setDate(expDate.getDate() + (data.crop_type === "Castor Seeds" ? 10 : 20));
-                await fetch("http://localhost:5000/api/bazaarpayments", {
+                await fetch(`${API_BASE_URL}/bazaarpayments`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, trader_name: data.trader_name, crop_type: data.crop_type, crop_date: data.date, expected_payment_date: expDate.toISOString().split("T")[0], amount: data.amount, is_credited: false })
                 });
@@ -262,7 +263,7 @@ export default function KantaBook() {
             groupedDebits[key].amount += roundToInt(b.sub_total || b.net_amount || b.total_amount || 0);
         });
 
-        const padamRes2 = await fetch("http://localhost:5000/api/padam");
+        const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
         const padamAll2 = await padamRes2.json();
 
         for (const [key, data] of Object.entries(groupedDebits)) {
@@ -270,10 +271,10 @@ export default function KantaBook() {
             const existingDebit = padamAll2.find(p => p.type === "debit" && p.party_name === tName && p.crop_type === cType && p.date === dDate);
             if (existingDebit) {
                 if (existingDebit.amount !== data.amount) {
-                    await fetch(`http://localhost:5000/api/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: data.amount, net_amount: data.amount, date: data.date, book_no: data.book_no, sl_no: data.bill_no }) });
+                    await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: data.amount, net_amount: data.amount, date: data.date, book_no: data.book_no, sl_no: data.bill_no }) });
                 }
             } else {
-                await fetch("http://localhost:5000/api/padam", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, date: data.date, type: "debit", party_name: tName, crop_type: cType, amount: data.amount, net_amount: data.amount }) });
+                await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, date: data.date, type: "debit", party_name: tName, crop_type: cType, amount: data.amount, net_amount: data.amount }) });
             }
         }
       } catch (err) { console.warn("Master Aggregation Sync failed:", err); }
@@ -305,7 +306,7 @@ export default function KantaBook() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
-    await fetch(`http://localhost:5000/api/kanta/${id}`, { method: "DELETE" });
+    await fetch(`${API_BASE_URL}/kanta/${id}`, { method: "DELETE" });
     load();
   };
 

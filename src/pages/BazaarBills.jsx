@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, X, Save, ChevronDown, ChevronRight, Receipt, IndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function BazaarBills() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/bazaarbills");
+      const res = await fetch(`${API_BASE_URL}/bazaarbills`);
       const data = await res.json();
       if (Array.isArray(data)) setEntries(data);
     } catch (err) { console.error("Failed to load Bazaar Bills", err); }
@@ -82,7 +83,7 @@ export default function BazaarBills() {
 
   const getNextBookAndBillNo = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/bazaarbills");
+      const res = await fetch(`${API_BASE_URL}/bazaarbills`);
       const data = await res.json();
       if (!data || data.length === 0) return { book_no: 1, bill_no: 1 };
 
@@ -156,14 +157,14 @@ export default function BazaarBills() {
       };
 
       if (editId) {
-        await fetch(`http://localhost:5000/api/bazaarbills/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData) });
+        await fetch(`${API_BASE_URL}/bazaarbills/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData) });
       } else {
-        await fetch("http://localhost:5000/api/bazaarbills", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData) });
+        await fetch(`${API_BASE_URL}/bazaarbills`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData) });
 
         const expectedDate = new Date(form.date);
         expectedDate.setDate(expectedDate.getDate() + (form.crop_type === "Castor Seeds" ? 10 : 20));
         
-        await fetch("http://localhost:5000/api/bazaarpayments", {
+        await fetch(`${API_BASE_URL}/bazaarpayments`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ book_no: finalBookNo, sl_no: finalBillNo, trader_name: form.trader_name, crop_type: form.crop_type, crop_date: form.date, expected_payment_date: expectedDate.toISOString().split("T")[0], amount: roundToInt(form.sub_total), is_credited: false }),
         });

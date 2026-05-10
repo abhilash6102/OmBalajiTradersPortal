@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, X, Save, ChevronDown, ChevronRight, FileText, IndianRupee, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ export default function TakPatti() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/takpatti");
+      const res = await fetch(`${API_BASE_URL}/takpatti`);
       const data = await res.json();
       if (Array.isArray(data)) setEntries(data);
     } catch (err) { console.error("Failed to load Tak Patti entries", err); }
@@ -108,7 +109,7 @@ export default function TakPatti() {
 
   const getNextBookAndSlNo = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/takpatti");
+      const res = await fetch(`${API_BASE_URL}/takpatti`);
       const data = await res.json();
       if (!data || data.length === 0) return { book_no: 1, sl_no: 1 };
 
@@ -177,17 +178,17 @@ export default function TakPatti() {
       };
 
       if (editId) {
-        await fetch(`http://localhost:5000/api/takpatti/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(takpattiData) });
+        await fetch(`${API_BASE_URL}/takpatti/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(takpattiData) });
       } else {
-        await fetch("http://localhost:5000/api/takpatti", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(takpattiData) });
+        await fetch(`${API_BASE_URL}/takpatti`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(takpattiData) });
       }
 
       if (finalSlNo != null) {
-        const kantaRes = await fetch("http://localhost:5000/api/kanta");
+        const kantaRes = await fetch(`${API_BASE_URL}/kanta`);
         const kantaAll = await kantaRes.json();
         const matchingKanta = kantaAll.find(k => Number(k.sl_no) === Number(finalSlNo) && Number(k.book_no || 1) === Number(finalBookNo));
         if (matchingKanta) {
-          await fetch(`http://localhost:5000/api/kanta/${matchingKanta._id || matchingKanta.id}`, {
+          await fetch(`${API_BASE_URL}/kanta/${matchingKanta._id || matchingKanta.id}`, {
             method: "PUT", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               ...matchingKanta, book_no: finalBookNo, date: takpattiData.date, farmer_name: takpattiData.farmer_name,
@@ -197,15 +198,15 @@ export default function TakPatti() {
           });
         }
 
-        const padamRes1 = await fetch("http://localhost:5000/api/padam");
+        const padamRes1 = await fetch(`${API_BASE_URL}/padam`);
         const padamAll1 = await padamRes1.json();
         const existingCredit = padamAll1.find(p => p.type === "credit" && Number(p.sl_no) === Number(finalSlNo) && Number(p.book_no || 1) === Number(finalBookNo));
         const creditData = { book_no: finalBookNo, sl_no: finalSlNo, date: takpattiData.date, type: "credit", party_name: takpattiData.farmer_name, village: takpattiData.village, amount: sumVal, commission: commVal, hamali: hamaliVal, dharvay: dharvayVal, chata: chataVal, net_amount: takpattiData.net_payable };
         
         if (existingCredit) {
-           await fetch(`http://localhost:5000/api/padam/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
+           await fetch(`${API_BASE_URL}/padam/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
         } else {
-           await fetch("http://localhost:5000/api/padam", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
+           await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
         }
 
         try {
@@ -232,7 +233,7 @@ export default function TakPatti() {
             });
             sumBAmount = roundToInt(sumBAmount);
             
-            const bazaarRes = await fetch("http://localhost:5000/api/bazaarbills");
+            const bazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
             const bazaarAll = await bazaarRes.json();
             
             let uBook = 1, uBill = 1;
@@ -265,12 +266,12 @@ export default function TakPatti() {
             
             const existingBB = bazaarAll.find(b => b.kanta_sl_no === finalSlNo);
             if (existingBB) {
-                await fetch(`http://localhost:5000/api/bazaarbills/${existingBB._id || existingBB.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
+                await fetch(`${API_BASE_URL}/bazaarbills/${existingBB._id || existingBB.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
             } else if (sumBBags > 0 || sumBTotalKg > 0) {
-                await fetch("http://localhost:5000/api/bazaarbills", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
+                await fetch(`${API_BASE_URL}/bazaarbills`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
             }
             
-            const freshBazaarRes = await fetch("http://localhost:5000/api/bazaarbills");
+            const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
             const freshBazaar = await freshBazaarRes.json();
 
             const groupedBP = {};
@@ -281,19 +282,19 @@ export default function TakPatti() {
                  groupedBP[key].amount += roundToInt(b.sub_total || b.net_amount || b.total_amount || 0);
             });
 
-            const bpRes = await fetch("http://localhost:5000/api/bazaarpayments");
+            const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
             const bpAll = await bpRes.json();
 
             for (const [key, data] of Object.entries(groupedBP)) {
                 const existingBP = bpAll.find(bp => bp.trader_name === data.trader_name && bp.crop_type === data.crop_type && bp.crop_date === data.date);
                 if (existingBP) {
                     if (!existingBP.is_credited && existingBP.amount !== data.amount) {
-                        await fetch(`http://localhost:5000/api/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: data.amount, book_no: data.book_no, sl_no: data.bill_no }) });
+                        await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: data.amount, book_no: data.book_no, sl_no: data.bill_no }) });
                     }
                 } else {
                     const expDate = new Date(data.date); 
                     expDate.setDate(expDate.getDate() + (data.crop_type === "Castor Seeds" ? 10 : 20));
-                    await fetch("http://localhost:5000/api/bazaarpayments", {
+                    await fetch(`${API_BASE_URL}/bazaarpayments`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, trader_name: data.trader_name, crop_type: data.crop_type, crop_date: data.date, expected_payment_date: expDate.toISOString().split("T")[0], amount: data.amount, is_credited: false })
                     });
@@ -308,7 +309,7 @@ export default function TakPatti() {
                 groupedDebits[key].amount += roundToInt(b.sub_total || b.net_amount || b.total_amount || 0);
             });
 
-            const padamRes2 = await fetch("http://localhost:5000/api/padam");
+            const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
             const padamAll2 = await padamRes2.json();
 
             for (const [key, data] of Object.entries(groupedDebits)) {
@@ -316,10 +317,10 @@ export default function TakPatti() {
                 const existingDebit = padamAll2.find(p => p.type === "debit" && p.party_name === tName && p.crop_type === cType && p.date === dDate);
                 if (existingDebit) {
                     if (existingDebit.amount !== data.amount) {
-                        await fetch(`http://localhost:5000/api/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: data.amount, net_amount: data.amount, date: data.date, book_no: data.book_no, sl_no: data.bill_no }) });
+                        await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: data.amount, net_amount: data.amount, date: data.date, book_no: data.book_no, sl_no: data.bill_no }) });
                     }
                 } else {
-                    await fetch("http://localhost:5000/api/padam", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, date: data.date, type: "debit", party_name: tName, crop_type: cType, amount: data.amount, net_amount: data.amount }) });
+                    await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, date: data.date, type: "debit", party_name: tName, crop_type: cType, amount: data.amount, net_amount: data.amount }) });
                 }
             }
         } catch (err) { console.warn("Master Aggregation Sync failed:", err); }
@@ -353,7 +354,7 @@ export default function TakPatti() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
-    try { await fetch(`http://localhost:5000/api/takpatti/${id}`, { method: "DELETE" }); load(); } catch (err) { console.error("Delete failed", err); }
+    try { await fetch(`${API_BASE_URL}/takpatti/${id}`, { method: "DELETE" }); load(); } catch (err) { console.error("Delete failed", err); }
   };
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));

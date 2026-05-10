@@ -39,11 +39,10 @@ export default function Dashboard() {
       const today = new Date().toISOString().split("T")[0];
 
       try {
-        // 🔥 Replaced base44 with native fetches to your local database
         const [kantaRes, takPattiRes, bazaarBillsRes] = await Promise.all([
-          fetch("http://localhost:5000/api/kanta").then(r => r.json()).catch(() => []),
-          fetch("http://localhost:5000/api/takpatti").then(r => r.json()).catch(() => []),
-          fetch("http://localhost:5000/api/bazaarbills").then(r => r.json()).catch(() => [])
+          fetch(`${API_BASE_URL}/kanta`).then(r => r.json()).catch(() => []),
+          fetch(`${API_BASE_URL}/takpatti`).then(r => r.json()).catch(() => []),
+          fetch(`${API_BASE_URL}/bazaarbills`).then(r => r.json()).catch(() => [])
         ]);
 
         // Calculate unique counts

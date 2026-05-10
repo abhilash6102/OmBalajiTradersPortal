@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, Clock, CheckCheck, Trash2, Search, IndianRupee, AlertCircle, Wallet, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export default function BazaarPayments() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/bazaarpayments");
+      const res = await fetch(`${API_BASE_URL}/bazaarpayments`);
       const data = await res.json();
       if (Array.isArray(data)) {
         data.sort((a, b) => {
@@ -99,7 +100,7 @@ export default function BazaarPayments() {
     setLoading(true);
     try {
       const updateId = confirmModal._id || confirmModal.id;
-      await fetch(`http://localhost:5000/api/bazaarpayments/${updateId}`, {
+      await fetch(`${API_BASE_URL}/bazaarpayments/${updateId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...confirmForm, is_credited: true }),
@@ -117,7 +118,7 @@ export default function BazaarPayments() {
     if (!window.confirm("Unmark this payment as credited?")) return;
     try {
       const updateId = payment._id || payment.id;
-      await fetch(`http://localhost:5000/api/bazaarpayments/${updateId}`, {
+      await fetch(`${API_BASE_URL}/bazaarpayments/${updateId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_credited: false, credited_date: null, bank: null }),
@@ -129,7 +130,7 @@ export default function BazaarPayments() {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this payment record?")) return;
     try {
-      await fetch(`http://localhost:5000/api/bazaarpayments/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/bazaarpayments/${id}`, { method: "DELETE" });
       load();
     } catch (err) { console.error("Delete failed", err); }
   };

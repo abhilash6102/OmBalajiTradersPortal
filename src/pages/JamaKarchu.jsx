@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/config";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Search, BarChart3, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export default function JamaKarchu() {
 
   const load = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/jamakarchu");
+      const res = await fetch(`${API_BASE_URL}/jamakarchu`);
       const data = await res.json();
       if (Array.isArray(data)) {
         // Sort newest first (descending)
@@ -69,14 +70,14 @@ export default function JamaKarchu() {
       if (editItem) {
         // 🔥 UPDATE
         const updateId = editItem._id || editItem.id;
-        await fetch(`http://localhost:5000/api/jamakarchu/${updateId}`, {
+        await fetch(`${API_BASE_URL}/jamakarchu/${updateId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
       } else {
         // 🔥 CREATE
-        await fetch("http://localhost:5000/api/jamakarchu", {
+        await fetch(`${API_BASE_URL}/jamakarchu`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -97,7 +98,7 @@ export default function JamaKarchu() {
     if (!window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
     try {
       // 🔥 DELETE
-      await fetch(`http://localhost:5000/api/jamakarchu/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/jamakarchu/${id}`, { method: "DELETE" });
       load();
     } catch (err) {
       console.error("Delete failed", err);
