@@ -27,12 +27,12 @@ export default defineConfig({
         start_url: '/OmBalajiTradersPortal/',
         icons: [
           {
-            src: 'logo.jpeg',
+            src: 'logo-192x192.jpeg',
             sizes: '192x192',
             type: 'image/jpeg'
           },
           {
-            src: 'logo.jpeg',
+            src: 'logo-512x512.jpeg',
             sizes: '512x512',
             type: 'image/jpeg'
           }
