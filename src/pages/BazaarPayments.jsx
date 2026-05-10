@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/api/config";
+import { API_BASE_URL } from "../api/config";
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, Clock, CheckCheck, Trash2, Search, IndianRupee, AlertCircle, Wallet, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";

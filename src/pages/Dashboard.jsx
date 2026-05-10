@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../api/config";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { 

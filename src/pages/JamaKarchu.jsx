@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/api/config";
+import { API_BASE_URL } from "../api/config";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Search, BarChart3, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
