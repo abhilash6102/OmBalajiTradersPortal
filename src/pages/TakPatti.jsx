@@ -462,10 +462,22 @@ export default function TakPatti() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="bg-muted/50 border-b border-border">
-                            <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Book - Sl.</th>
-                            {["Date", "Farmer", "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => (
-                              <th key={h} className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{h}</th>
-                            ))}
+                            <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                              Book - Sl.No
+                            </th>
+                            {["Date", "Farmer", "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
+                              // 🔥 Define which headers should be right-aligned
+                              const isMoney = ["Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)"].includes(h);
+                              
+                              return (
+                                <th 
+                                  key={h} 
+                                  className={`${isMoney ? "text-right" : "text-left"} px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap`}
+                                >
+                                  {h}
+                                </th>
+                              );
+                            })}
                           </tr>
                         </thead>
                         <tbody>
@@ -477,32 +489,32 @@ export default function TakPatti() {
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{formatDate(row.date) || "—"}</td>
                                 <td className="px-3 py-3 font-medium whitespace-nowrap">{row.farmer_name}</td>
                                 <td className="px-3 py-3 text-muted-foreground">{row.village}</td>
-                                <td className="px-3 py-3">{row.crop_type || "—"}</td>
-                                <td className="px-3 py-3">{row.bag_type || "—"}</td>
-                                <td className="px-3 py-3 font-mono">{row.bags ?? "—"}</td>
-                                <td className="px-3 py-3 font-mono">{row.kgs ?? "—"}</td>
-                                <td className="px-3 py-3 font-mono">{row.quintals ?? "—"}</td>
-                                <td className="px-3 py-3 font-mono">{row.leftover_kgs ?? "—"}</td>
-                                <td className="px-3 py-3 font-mono">₹{formatExact(row.price_per_unit)}</td>
-                                <td className="px-3 py-3 font-mono font-semibold">₹{formatMoney(row.sum_amount)}</td>
-                                <td className="px-3 py-3 font-mono">₹{formatMoney(row.commission)}</td>
-                                <td className="px-3 py-3 font-mono">₹{formatMoney(row.hamali)}</td>
-                                <td className="px-3 py-3 font-mono">₹{formatMoney(row.dharvay)}</td>
-                                <td className="px-3 py-3 font-mono">₹{formatMoney(row.chata)}</td>
-                                <td className="px-3 py-3 font-mono text-destructive">₹{formatMoney(deductions)}</td>
-                                <td className="px-3 py-3 font-mono font-semibold text-primary">₹{formatMoney(row.net_payable)}</td>
-                                <td className="px-3 py-3"><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}><Trash2 className="w-4 h-4" /></Button></td>
+                                <td className="px-3 py-3 text-center">{row.crop_type || "—"}</td>
+                                <td className="px-3 py-3 text-center">{row.bag_type || "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono">{row.bags ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono">{row.kgs ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono">{row.quintals ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono">{row.leftover_kgs ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono">₹{formatExact(row.price_per_unit)}</td>
+                                <td className="px-3 py-3 text-right font-mono font-semibold">₹{formatMoney(row.sum_amount)}</td>
+                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.commission)}</td>
+                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.hamali)}</td>
+                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.dharvay)}</td>
+                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.chata)}</td>
+                                <td className="px-3 py-3 font-mono text-destructive text-right">₹{formatMoney(deductions)}</td>
+                                <td className="px-3 py-3 font-mono font-semibold text-primary text-right">₹{formatMoney(row.net_payable)}</td>
+                                <td className="px-3 py-3 "><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}><Trash2 className="w-4 h-4" /></Button></td>
                               </tr>
                             );
                           })}
                           <tr className="bg-primary/10 border-t-2 border-primary/30 font-bold">
                             <td colSpan={12} className="px-3 py-2.5 text-xs font-bold text-primary uppercase tracking-wide">✦ Totals</td>
-                            <td className="px-3 py-2.5 font-mono text-primary">₹{formatMoney(totals.commission)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary">₹{formatMoney(totals.hamali)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary">₹{formatMoney(totals.dharvay)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary">₹{formatMoney(totals.chata)}</td>
-                            <td className="px-3 py-2.5 font-mono text-destructive">₹{formatMoney(totals.commission + totals.hamali + totals.dharvay + totals.chata)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary">₹{formatMoney(totals.net_payable)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.commission)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.hamali)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.dharvay)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.chata)}</td>
+                            <td className="px-3 py-2.5 font-mono text-destructive text-right">₹{formatMoney(totals.commission + totals.hamali + totals.dharvay + totals.chata)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.net_payable)}</td>
                             <td className="px-3 py-2.5"></td>
                           </tr>
                         </tbody>

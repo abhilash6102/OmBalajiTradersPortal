@@ -119,7 +119,6 @@ export default function BazaarBills() {
         const kgs = roundToInt(updated.kgs);
         const price = toExactDec(updated.price_per_unit);
         
-        // 🔥 ONLY COTTON BYPASSES BAG MATH
         const isBagCrop = updated.crop_type !== "Cotton";
         const bagWt = BAG_WEIGHTS[updated.bag_type] || 0;
         const totalKg = toDec(isBagCrop ? (bags * bagWt) + kgs : kgs);
@@ -192,15 +191,13 @@ export default function BazaarBills() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-
-const handleDelete = async (id) => {
-  try { 
-    await fetch(`${API_BASE_URL}/bazaarbills/${id}`, { method: "DELETE" }); 
-    load(); 
-  } catch (err) { 
-    console.error("Delete failed", err); 
-  }
-};
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete record?")) return;
+    try { 
+      await fetch(`${API_BASE_URL}/bazaarbills/${id}`, { method: "DELETE" }); 
+      load(); 
+    } catch (err) { console.error("Delete failed", err); }
+  };
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -215,7 +212,7 @@ const handleDelete = async (id) => {
   return (
     <div className="pb-20">
       <PageHeader title="Bazaar Bills" subtitle="Trader billing register — manage unified billing records & subtotals">
-        <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Bill Record</Button>
+        {!showForm && <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Bill Record</Button>}
       </PageHeader>
 
       {showForm && (
@@ -260,100 +257,85 @@ const handleDelete = async (id) => {
       {!showForm && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <StatCard title="Total Subtotals Amount" value={`₹${formatMoney(totalAmount)}`} icon={Receipt} />
-            <StatCard title="Total Unique Bills" value={totalBillsCount} icon={IndianRupee} />
+            <StatCard title="Total Amount" value={`₹${formatMoney(totalAmount)}`} icon={Receipt} />
+            <StatCard title="Bills Count" value={totalBillsCount} icon={IndianRupee} />
           </div>
 
           <div className="mb-4 flex flex-wrap gap-2">
             <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-44" />
-            <Input placeholder="Trader name" value={traderFilter} onChange={(e) => setTraderFilter(e.target.value)} className="w-40" />
+            <Input placeholder="Trader Name" value={traderFilter} onChange={(e) => setTraderFilter(e.target.value)} className="w-40" />
           </div>
 
-          {grouped.length === 0 && <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm">No records found</div>}
-          
           {grouped.map(({ date, bills }) => (
             <div key={date} className="mb-6">
-              <button type="button" onClick={() => toggleDate(date)} className="flex items-center gap-2 mb-2 w-full text-left">
-                {collapsedDates[date] ? <ChevronRight className="w-4 h-4 text-primary" /> : <ChevronDown className="w-4 h-4 text-primary" />}
-                <span className="font-semibold text-primary text-sm">{formatDate(date)}</span>
-                <Badge variant="secondary" className="text-xs">{bills.length} bills</Badge>
+              <button type="button" onClick={() => toggleDate(date)} className="flex items-center gap-2 mb-2 w-full text-left font-semibold text-primary">
+                {collapsedDates[date] ? <ChevronRight className="w-4" /> : <ChevronDown className="w-4" />}
+                {formatDate(date)}
               </button>
-              
               {!collapsedDates[date] && (
-                <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-muted/50 border-b border-border">
-                          {["Amount (₹)", "Quintals", "Kgs", "Bags", "Bag Type", "Crop", "Price/Unit", ""].map(h => (
-                            <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{h}</th>
-                          ))}
+                        <tr className="bg-muted/50 border-b border-border uppercase text-xs font-semibold text-muted-foreground">
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-left">Book - Bill.No</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">Amount (₹)</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Quintals</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Kgs</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Bags</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Bag Type</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Crop</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Price/Unit</th>
+                          <th className="px-4 py-3 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {bills.map((bill, index) => {
+                        {bills.map((bill, bIdx) => {
                           const cropEntries = Object.entries(bill.crops);
                           let billTotal = 0;
-
                           return (
-                            <React.Fragment key={index}>
+                            <React.Fragment key={bIdx}>
                               <tr className="bg-primary/5 border-y border-border">
-                                <td colSpan={8} className="px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                  <span className="text-primary font-bold">{bill.book_no}-{bill.bill_no}</span> &nbsp;&nbsp;|&nbsp;&nbsp; {bill.trader_name}
+                                <td colSpan={9} className="px-4 py-2 text-sm font-medium">
+                                  <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {bill.trader_name}
                                 </td>
                               </tr>
-
                               {cropEntries.map(([cropName, rows]) => {
-                                const cropSubtotal = rows.reduce((sum, r) => sum + (r.sub_total || r.net_amount || r.total_amount || 0), 0);
-                                const totalBags = rows.reduce((sum, r) => sum + (Number(r.bags) || 0), 0);
+                                const cropSubtotal = rows.reduce((s, r) => s + (Number(r.sub_total) || Number(r.net_amount) || 0), 0);
+                                const totalBags = rows.reduce((s, r) => s + (Number(r.bags) || 0), 0);
                                 billTotal += cropSubtotal;
-
                                 return (
                                   <React.Fragment key={cropName}>
-                                    {rows.map((row) => {
-                                      const rowAmt = row.sub_total || row.net_amount || row.total_amount || 0;
-                                      return (
-                                        <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors">
-                                          <td className="px-4 py-2.5 font-mono font-semibold text-primary">₹{formatMoney(rowAmt)}</td>
-                                          <td className="px-4 py-2.5 font-mono">{row.quintals ?? "—"}</td>
-                                          <td className="px-4 py-2.5 font-mono">{row.kgs ?? "—"}</td>
-                                          <td className="px-4 py-2.5 font-mono">{row.bags ?? "—"}</td>
-                                          <td className="px-4 py-2.5">{row.bag_type || "—"}</td>
-                                          <td className="px-4 py-2.5 font-medium">{row.crop_type || "—"}</td>
-                                          <td className="px-4 py-2.5 font-mono">₹{formatExact(row.price_per_unit)}</td>
-                                          <td className="px-4 py-2.5 text-right">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
-                                              <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-
-                                    <tr className="bg-blue-50/30 border-b border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30">
-                                      <td className="pl-4 pr-2 py-2 font-mono font-bold text-blue-700 dark:text-blue-400 text-sm whitespace-nowrap">
-                                        ₹{formatMoney(cropSubtotal)}
-                                      </td>
-                                      <td colSpan={2} className="pl-1 pr-4 py-2 text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide text-left">
-                                        {bill.trader_name} {cropName} total
-                                      </td>
-                                      <td className="pl-4 pr-2 py-2 font-mono font-bold text-blue-700 dark:text-blue-400 text-sm">
-                                        {totalBags}
-                                      </td>
-                                      <td colSpan={4} className="pl-1 pr-4 py-2 text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide text-left">
-                                        total bags
-                                      </td>
+                                    {rows.map((row) => (
+                                      <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer">
+                                        <td className="px-4 py-2.5"></td>
+                                        <td className="px-4 py-2.5 text-right font-mono font-bold text-primary">₹{formatMoney(row.sub_total || row.net_amount || 0)}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono">{row.quintals ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono">{row.kgs ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono">{row.bags ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-center">{row.bag_type || "—"}</td>
+                                        <td className="px-4 py-2.5 text-center font-medium">{row.crop_type}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono">₹{formatExact(row.price_per_unit)}</td>
+                                        <td className="px-4 py-2.5 text-center">
+                                          <button onClick={e => { e.stopPropagation(); handleDelete(row._id || row.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    <tr className="bg-blue-50/40 text-[10px] font-bold text-blue-700 uppercase">
+                                      <td className="px-4 py-1.5"></td>
+                                      <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropSubtotal)}</td>
+                                      <td colSpan={2} className="px-4 py-2.5 text-left pl-6  font-mono text-sm tracking-wide">CROP TOTAL ({cropName})</td>
+                                      <td className="px-4 py-1.5 text-center font-mono text-sm">{totalBags}</td>
+                                      <td colSpan={4} className="px-4 py-1.5 font-mono text-sm text-left pl-4">TOTAL BAGS</td>
                                     </tr>
                                   </React.Fragment>
                                 );
                               })}
-
                               {cropEntries.length > 1 && (
-                                <tr className="bg-secondary/20 border-b-2 border-primary/20">
-                                  <td className="px-4 py-2.5 font-mono font-bold text-primary text-base">₹{formatMoney(billTotal)}</td>
-                                  <td colSpan={7} className="px-4 py-2.5 text-xs font-bold text-primary uppercase tracking-wide">
-                                    Grand Bill Total
-                                  </td>
+                                <tr className="bg-muted/30 border-b-2 border-primary/20 font-bold">
+                                  <td className="px-4 py-2"></td>
+                                  <td className="px-4 py-2 text-right font-mono text-primary text-base">₹{formatMoney(billTotal)}</td>
+                                  <td colSpan={7} className="px-4 py-2 text-left pl-6 text-primary tracking-tighter text-xs">GRAND BILL TOTAL</td>
                                 </tr>
                               )}
                             </React.Fragment>

@@ -394,17 +394,17 @@ export default function KantaBook() {
                   <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Book - Sl.</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Book - Sl.No</th>
                       <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Crop</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bag Type</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bags</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kgs</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Crop</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bag Type</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bags</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kgs</th>
                       <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Farmer</th>
                       <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Village</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price/Unit</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trader</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bazaar Bags</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price/Unit</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trader</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bazaar Bags</th>
                       <th className="px-4 py-2.5"></th>
                     </tr>
                   </thead>
@@ -413,15 +413,15 @@ export default function KantaBook() {
                       <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors">
                         <td className="px-4 py-3 text-muted-foreground font-semibold"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(row.date) || "—"}</td>
-                        <td className="px-4 py-3 font-medium">{row.crop_type || "—"}</td>
-                        <td className="px-4 py-3">{row.bag_type || "—"}</td>
-                        <td className="px-4 py-3 font-mono">{row.bags ?? "—"}</td>
-                        <td className="px-4 py-3 font-mono">{row.kgs ?? "—"}</td>
-                        <td className="px-4 py-3">{row.farmer_name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{row.village}</td>
-                        <td className="px-4 py-3 font-mono">₹{formatExact(row.price_per_unit)}</td>
-                        <td className="px-4 py-3">{row.trader_name}</td>
-                        <td className="px-4 py-3">{row.bazaar != null ? row.bazaar : "—"}</td>
+                        <td className="px-4 py-3 text-center font-medium">{row.crop_type || "—"}</td>
+                        <td className="px-4 py-3 text-center">{row.bag_type || "—"}</td>
+                        <td className="px-4 py-3 text-center font-mono">{row.bags ?? "—"}</td>
+                        <td className="px-4 py-3 text-center font-mono">{row.kgs ?? "—"}</td>
+                        <td className="px-4 py-3 text-left">{row.farmer_name}</td>
+                        <td className="px-4 py-3 text-left text-muted-foreground">{row.village}</td>
+                        <td className="px-4 py-3 text-center font-mono">₹{formatExact(row.price_per_unit)}</td>
+                        <td className="px-4 py-3 text-center">{row.trader_name}</td>
+                        <td className="px-4 py-3 text-center">{row.bazaar != null ? row.bazaar : "—"}</td>
                         <td className="px-4 py-3">
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
                             <Trash2 className="w-4 h-4" />

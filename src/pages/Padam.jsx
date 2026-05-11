@@ -14,7 +14,6 @@ const EMPTY_FORM = {
   amount: "", commission: "", hamali: "", dharvay: "", chata: ""
 };
 
-// 🔥 BULLETPROOF 2-DECIMAL HELPER
 const formatMoney = (num) => {
   const parsed = Math.round(Number(num || 0));
   if (isNaN(parsed)) return "0.00";
@@ -35,7 +34,6 @@ function formatDate(dateStr) {
   return `${d}/${m}/${y}`;
 }
 
-// 🔥 GROUPS BY DATE IN DESCENDING ORDER, RECORDS IN ASCENDING ORDER
 function groupByDate(entries) {
   const groups = {};
   entries.forEach(e => {
@@ -44,12 +42,12 @@ function groupByDate(entries) {
     groups[d].push(e);
   });
   return Object.entries(groups)
-    .sort(([a], [b]) => b.localeCompare(a)) // Descending Order for Dates
+    .sort(([a], [b]) => b.localeCompare(a))
     .map(([dateKey, rows]) => [
       dateKey,
       [...rows].sort((a, b) => {
         if (a.book_no !== b.book_no) return (a.book_no || 1) - (b.book_no || 1);
-        return (a.sl_no || 0) - (b.sl_no || 0); // Ascending Order for Records
+        return (a.sl_no || 0) - (b.sl_no || 0);
       })
     ]);
 }
@@ -78,23 +76,31 @@ export default function Padam() {
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const getNextSlNo = async () => {
+  const getNextSlNo = async (type) => {
     try {
       const res = await fetch(`${API_BASE_URL}/padam`);
       const data = await res.json();
-      const maxSl = data.reduce((max, item) => Math.max(max, Number(item.sl_no || 0)), 0);
+      const filteredData = data.filter(item => item.type === type);
+      const maxSl = filteredData.reduce((max, item) => Math.max(max, Number(item.sl_no || 0)), 0);
       return maxSl + 1;
     } catch (err) { return 1; }
   };
 
   const handleAddNew = async () => {
-    const nextSl = await getNextSlNo();
+    const nextSl = await getNextSlNo("credit");
     setEditId(null);
-    setForm({ ...EMPTY_FORM, sl_no: nextSl });
+    setForm({ ...EMPTY_FORM, sl_no: nextSl, date: new Date().toISOString().split("T")[0] });
     setShowForm(true);
   };
 
-  const setField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const setField = async (key, value) => {
+    if (key === "type" && !editId) {
+      const nextSl = await getNextSlNo(value);
+      setForm(prev => ({ ...prev, [key]: value, sl_no: nextSl }));
+    } else {
+      setForm(prev => ({ ...prev, [key]: value }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -111,12 +117,8 @@ export default function Padam() {
         ? roundToInt(amount - (commission + hamali + dharvay + chata)) 
         : amount;
 
-      let finalBookNo = toNum(form.book_no) || 1;
-      let finalSlNo = toNum(form.sl_no) || (await getNextSlNo());
-
       const data = {
-        ...form, book_no: finalBookNo, sl_no: finalSlNo,
-        amount, commission, hamali, dharvay, chata, net_amount
+        ...form, amount, commission, hamali, dharvay, chata, net_amount
       };
 
       if (editId) {
@@ -160,7 +162,6 @@ export default function Padam() {
 
   const grouped = groupByDate(filtered);
 
-  // Global Totals for Top Stat Cards
   const globalCreditEntries = filtered.filter(e => e.type === "credit");
   const globalDebitEntries = filtered.filter(e => e.type === "debit");
 
@@ -177,14 +178,25 @@ export default function Padam() {
   return (
     <div className="pb-20">
       <PageHeader title="Padam Ledger" subtitle="Credit–Debit Day Book — track daily financial balance between farmers and traders">
-        <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button>
+        {!showForm && <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button>}
       </PageHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard title="Overall Credit (Jama)" value={`₹${formatMoney(totalCreditGross)}`} icon={ArrowDownLeft} className="border-green-200 bg-green-50/30 text-green-800" />
-        <StatCard title="Overall Debit (Udhar)" value={`₹${formatMoney(totalDebitNet)}`} icon={ArrowUpRight} className="border-red-200 bg-red-50/30 text-red-800" />
-        <StatCard title="Overall Difference" value={`₹${formatMoney(currentBalance)}`} icon={CreditCard} />
-      </div>
+      {!showForm && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <StatCard title="Overall Credit (Jama)" value={`₹${formatMoney(totalCreditGross)}`} icon={ArrowDownLeft} className="border-green-200 bg-green-50/30 text-green-800" />
+            <StatCard title="Overall Debit (Udhar)" value={`₹${formatMoney(totalDebitNet)}`} icon={ArrowUpRight} className="border-red-200 bg-red-50/30 text-red-800" />
+            <StatCard title="Overall Difference" value={`₹${formatMoney(currentBalance)}`} icon={CreditCard} />
+          </div>
+
+          <div className="mb-6">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search Name, Village, Crop..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            </div>
+          </div>
+        </>
+      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5 mb-6 shadow-sm">
@@ -236,18 +248,7 @@ export default function Padam() {
         </form>
       )}
 
-      <div className="mb-6">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search Name, Village, Crop..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-      </div>
-
-      {grouped.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm">No records found.</div>
-      ) : (
-        grouped.map(([dateKey, rows]) => {
-          // DAILY TALLY CALCULATIONS
+      {!showForm && grouped.map(([dateKey, rows]) => {
           const dailyCreditEntries = rows.filter(e => e.type === "credit");
           const dailyDebitEntries = rows.filter(e => e.type === "debit");
 
@@ -274,34 +275,28 @@ export default function Padam() {
 
               {!collapsedDates[dateKey] && (
                 <div className="flex flex-col md:flex-row border border-border rounded-xl overflow-hidden bg-card shadow-sm text-sm">
-                  
-                  {/* LEFT SIDE: CREDIT (FARMERS) */}
                   <div className="flex-1 border-b md:border-b-0 md:border-r border-border flex flex-col">
-                    <div className="bg-green-50 text-green-800 font-bold p-3 border-b text-center tracking-wider">
-                      CREDIT — Farmers
-                    </div>
+                    <div className="bg-green-50 text-green-800 font-bold p-3 border-b text-center tracking-wider">CREDIT — Farmers</div>
                     <div className="flex-1 overflow-x-auto min-h-[150px]">
                       <table className="w-full">
                         <thead className="bg-muted/50 border-b">
                           <tr>
-                            {/* 🔥 Applied exact requested header classes */}
                             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Book-Sl.No</th>
                             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Farmer</th>
                             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Village</th>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Net Amount</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Net Amount</th>
                             <th className="px-4 py-2.5"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {dailyCreditEntries.map(row => (
                             <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b hover:bg-muted/20 cursor-pointer">
-                              {/* 🔥 Synced body cells to px-4 py-3 for straight lines */}
                               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                                <span className="text-green-700 font-medium">{row.book_no || 1}</span>-{row.sl_no ?? "—"}
+                                <span className="text-green-700 font-medium">{row.book_no || 1} </span>- {row.sl_no ?? "—"} 
                               </td>
                               <td className="px-4 py-3 font-medium text-foreground">{row.party_name}</td>
                               <td className="px-4 py-3 text-muted-foreground">{row.village || "—"}</td>
-                              <td className="px-4 py-3 text-left font-mono font-semibold text-green-700">₹{formatMoney(row.net_amount || row.amount)}</td>
+                              <td className="px-4 py-3 text-right font-mono font-semibold text-green-700">₹{formatMoney(row.net_amount || row.amount)}</td>
                               <td className="px-4 py-3 text-right">
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
                                   <Trash2 className="w-4 h-4" />
@@ -312,8 +307,6 @@ export default function Padam() {
                         </tbody>
                       </table>
                     </div>
-
-                    {/* Bottom Tallies */}
                     <div className="bg-muted/30 p-4 border-t font-mono space-y-2 mt-auto">
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
                         <span className="font-medium text-sm">Total Net Credit:</span> 
@@ -335,82 +328,54 @@ export default function Padam() {
                         <span className="font-medium text-sm">Total Chata:</span> 
                         <span className="font-semibold text-sm">₹{formatMoney(dTotalCreditChata)}</span>
                       </div>
-                      
-                      {dCreditShortfall > 0 && (
-                        <div className="flex justify-between font-bold text-amber-600 pt-2 border-t border-dashed border-amber-300">
-                          <span>By Balance c/d (Shortfall):</span> <span>₹{formatMoney(dCreditShortfall)}</span>
-                        </div>
-                      )}
 
-                      <div className="flex justify-between font-bold text-sm text-green-800 pt-2 border-t-2 border-green-800 mt-2">
-                        <span>Grand Total Credit:</span> <span>₹{formatMoney(dGrandTotal)}</span>
-                      </div>
+                      {dCreditShortfall > 0 && <div className="flex justify-between font-bold text-amber-600 pt-1 border-t border-dashed border-amber-300"><span>By Balance c/d:</span> <span>₹{formatMoney(dCreditShortfall)}</span></div>}
+                      <div className="flex justify-between font-bold text-sm text-green-800 pt-1 border-t-2 border-green-800"><span>Grand Total:</span> <span>₹{formatMoney(dGrandTotal)}</span></div>
                     </div>
                   </div>
 
-                  {/* RIGHT SIDE: DEBIT (TRADERS) */}
                   <div className="flex-1 flex flex-col">
-                    <div className="bg-red-50 text-red-800 font-bold p-3 border-b text-center tracking-wider">
-                      DEBIT — Traders
-                    </div>
+                    <div className="bg-red-50 text-red-800 font-bold p-3 border-b text-center tracking-wider">DEBIT — Traders</div>
                     <div className="flex-1 overflow-x-auto min-h-[150px]">
                       <table className="w-full">
                         <thead className="bg-muted/50 border-b">
                           <tr>
-                            {/* 🔥 Applied exact requested header classes */}
                             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Book-Bill.No</th>
                             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Trader</th>
                             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Crop</th>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Total Amount</th>
+                            <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap text-right">Total Amount</th>
                             <th className="px-4 py-2.5"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {dailyDebitEntries.map(row => (
                             <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b hover:bg-muted/20 cursor-pointer">
-                              {/* 🔥 Synced body cells to px-4 py-3 for straight lines */}
-                              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                                <span className="text-red-700 font-medium">{row.book_no || 1}</span>-{row.sl_no ?? "—"}
-                              </td>
+                              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap"><span className="text-red-700 font-medium">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
                               <td className="px-4 py-3 font-medium text-foreground">{row.party_name}</td>
                               <td className="px-4 py-3 text-muted-foreground">{row.crop_type || "—"}</td>
-                              <td className="px-4 py-3 text-left font-mono font-semibold text-red-700">₹{formatMoney(row.net_amount || row.amount)}</td>
+                              <td className="px-4 py-3 text-right font-mono font-semibold text-red-700">₹{formatMoney(row.net_amount || row.amount)}</td>
                               <td className="px-4 py-3 text-right">
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}><Trash2 className="w-4 h-4" /></Button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    
-                    {/* Bottom Tallies */}
                     <div className="bg-muted/30 p-4 border-t font-mono space-y-2 mt-auto">
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
                         <span className="font-medium text-sm">Total Debit:</span> 
                         <span className="font-semibold text-sm">₹{formatMoney(dTotalDebitNet)}</span>
                       </div>
-                      
-                      {dDebitShortfall > 0 && (
-                        <div className="flex justify-between font-bold text-amber-600 pt-2 border-t border-dashed border-amber-300">
-                          <span>To Balance c/d (Shortfall):</span> <span>₹{formatMoney(dDebitShortfall)}</span>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between font-bold text-sm text-red-800 pt-2 border-t-2 border-red-800 mt-2">
-                        <span>Grand Total Debit:</span> <span>₹{formatMoney(dGrandTotal)}</span>
-                      </div>
+                      {dDebitShortfall > 0 && <div className="flex justify-between font-bold text-amber-600 pt-1 border-t border-dashed border-amber-300"><span>To Balance c/d:</span> <span>₹{formatMoney(dDebitShortfall)}</span></div>}
+                      <div className="flex justify-between font-bold text-sm text-red-800 pt-1 border-t-2 border-red-800 mt-6"><span>Grand Total:</span> <span>₹{formatMoney(dGrandTotal)}</span></div>
                     </div>
                   </div>
-
                 </div>
               )}
             </div>
           );
-        })
-      )}
+      })}
     </div>
   );
 }
