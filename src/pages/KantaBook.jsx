@@ -190,8 +190,6 @@ export default function KantaBook() {
         
         let uBook = 1, uBill = 1;
         
-        // 🔥 CRITICAL FIX: It now groups ONLY if the Trader, Date, AND CROP match. 
-        // This forces a new bill_no for different crops, separating them perfectly in the UI.
         const existingBillForTrader = bazaarAll.find(b => b.date === form.date && b.trader_name === form.trader_name && b.crop_type === crop);
         
         if (existingBillForTrader) {
@@ -225,59 +223,37 @@ export default function KantaBook() {
             await fetch(`${API_BASE_URL}/bazaarbills`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
         }
 
-        const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
-        const freshBazaar = await freshBazaarRes.json();
-
-        const groupedBP = {};
-        freshBazaar.forEach(b => {
-             if(!b.trader_name || !b.crop_type || !b.date) return;
-             const key = `${b.trader_name}_${b.crop_type}_${b.date}`;
-             if (!groupedBP[key]) groupedBP[key] = { trader_name: b.trader_name, crop_type: b.crop_type, date: b.date, amount: 0, book_no: parseInt(b.book_no, 10) || 1, bill_no: parseInt(String(b.bill_no).replace(/.*-/, ''), 10) || 1 };
-             groupedBP[key].amount += roundToInt(b.sub_total || b.net_amount || b.total_amount || 0);
-        });
-
         const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
         const bpAll = await bpRes.json();
+        const existingBP = bpAll.find(bp => bp.trader_name === form.trader_name && bp.crop_type === crop && bp.crop_date === form.date);
+        
+        const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+        const freshBazaar = await freshBazaarRes.json();
+        const traderDayBills = freshBazaar.filter(b => b.trader_name === form.trader_name && b.crop_type === crop && b.date === form.date);
+        const dayTotal = traderDayBills.reduce((s, b) => s + (b.sub_total || 0), 0);
 
-        for (const [key, data] of Object.entries(groupedBP)) {
-            const existingBP = bpAll.find(bp => bp.trader_name === data.trader_name && bp.crop_type === data.crop_type && bp.crop_date === data.date);
-            if (existingBP) {
-                if (!existingBP.is_credited && existingBP.amount !== data.amount) {
-                    await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: data.amount, book_no: data.book_no, sl_no: data.bill_no }) });
-                }
-            } else {
-                const expDate = new Date(data.date); 
-                expDate.setDate(expDate.getDate() + (data.crop_type === "Castor Seeds" ? 10 : 20));
-                await fetch(`${API_BASE_URL}/bazaarpayments`, {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, trader_name: data.trader_name, crop_type: data.crop_type, crop_date: data.date, expected_payment_date: expDate.toISOString().split("T")[0], amount: data.amount, is_credited: false })
-                });
+        if (existingBP) {
+            if (!existingBP.is_credited) {
+                await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: dayTotal }) });
             }
+        } else if (dayTotal > 0) {
+            const expDate = new Date(form.date);
+            expDate.setDate(expDate.getDate() + (crop === "Castor Seeds" ? 10 : 20));
+            await fetch(`${API_BASE_URL}/bazaarpayments`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ book_no: uBook, sl_no: uBill, trader_name: form.trader_name, crop_type: crop, crop_date: form.date, expected_payment_date: expDate.toISOString().split("T")[0], amount: dayTotal, is_credited: false })
+            });
         }
-
-        const groupedDebits = {};
-        freshBazaar.forEach(b => {
-            if(!b.trader_name || !b.crop_type || !b.date) return;
-            const key = `${b.trader_name}_${b.crop_type}_${b.date}`;
-            if (!groupedDebits[key]) groupedDebits[key] = { amount: 0, date: b.date, book_no: parseInt(b.book_no, 10) || 1, bill_no: parseInt(String(b.bill_no).replace(/.*-/, ''), 10) || 1 };
-            groupedDebits[key].amount += roundToInt(b.sub_total || b.net_amount || b.total_amount || 0);
-        });
 
         const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
         const padamAll2 = await padamRes2.json();
-
-        for (const [key, data] of Object.entries(groupedDebits)) {
-            const [tName, cType, dDate] = key.split("_");
-            const existingDebit = padamAll2.find(p => p.type === "debit" && p.party_name === tName && p.crop_type === cType && p.date === dDate);
-            if (existingDebit) {
-                if (existingDebit.amount !== data.amount) {
-                    await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: data.amount, net_amount: data.amount, date: data.date, book_no: data.book_no, sl_no: data.bill_no }) });
-                }
-            } else {
-                await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: data.book_no, sl_no: data.bill_no, date: data.date, type: "debit", party_name: tName, crop_type: cType, amount: data.amount, net_amount: data.amount }) });
-            }
+        const existingDebit = padamAll2.find(p => p.type === "debit" && p.party_name === form.trader_name && p.crop_type === crop && p.date === form.date);
+        if (existingDebit) {
+            await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: dayTotal, net_amount: dayTotal }) });
+        } else if (dayTotal > 0) {
+            await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: uBook, sl_no: uBill, date: form.date, type: "debit", party_name: form.trader_name, crop_type: crop, amount: dayTotal, net_amount: dayTotal }) });
         }
-      } catch (err) { console.warn("Master Aggregation Sync failed:", err); }
+      } catch (err) { console.warn("Sync failed:", err); }
 
       setLoading(false);
       setForm(EMPTY_FORM);
@@ -305,7 +281,7 @@ export default function KantaBook() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
+    if (!window.confirm("Are you sure?")) return;
     await fetch(`${API_BASE_URL}/kanta/${id}`, { method: "DELETE" });
     load();
   };
@@ -323,7 +299,7 @@ export default function KantaBook() {
 
   return (
     <div className="pb-20">
-      <PageHeader title="Kanta Book" subtitle="Initial crop entry register — record all incoming agricultural produce">
+      <PageHeader title="Kanta Book" subtitle="Initial crop entry register">
         <div className="flex gap-2">
           <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button>
           <Button variant="outline" onClick={() => setShowPrint(true)}><Printer className="w-4 h-4 mr-2" /> Print</Button>
@@ -378,52 +354,51 @@ export default function KantaBook() {
         <Input placeholder="Crop" value={cropFilter} onChange={(e) => setCropFilter(e.target.value)} className="w-32" />
       </div>}
 
-      {!showForm && grouped.length === 0 && <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm">No records found</div>}
-
       {!showForm && grouped.map(([dateKey, rows]) => (
         <div key={dateKey} className="mb-6">
-          <button type="button" onClick={() => toggleDate(dateKey)} className="flex items-center gap-2 mb-2 w-full text-left">
-            {collapsedDates[dateKey] ? <ChevronRight className="w-4 h-4 text-primary" /> : <ChevronDown className="w-4 h-4 text-primary" />}
-            <span className="font-semibold text-primary text-sm">{formatDate(dateKey)}</span>
-            <Badge variant="secondary" className="text-xs">{rows.length} entries</Badge>
+          <button type="button" onClick={() => toggleDate(dateKey)} className="flex items-center gap-2 mb-2 w-full text-left font-semibold text-primary">
+            {collapsedDates[dateKey] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <span className="text-sm">{formatDate(dateKey)}</span>
+            <Badge variant="secondary" className="ml-2 text-xs">{rows.length} entries</Badge>
           </button>
           {!collapsedDates[dateKey] && (
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <div id="print-area">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+            <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Book - Sl.No</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Crop</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bag Type</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bags</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kgs</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Farmer</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Village</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price/Unit</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trader</th>
-                      <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bazaar Bags</th>
-                      <th className="px-4 py-2.5"></th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Book - Sl.No</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Date</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Crop</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Bag Type</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Bags</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Kgs</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Farmer</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Village</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Price/Unit</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Trader</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Bazaar Bags</th>
+                      <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border">
                     {rows.map((row) => (
-                      <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors">
-                        <td className="px-4 py-3 text-muted-foreground font-semibold"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDate(row.date) || "—"}</td>
-                        <td className="px-4 py-3 text-center font-medium">{row.crop_type || "—"}</td>
-                        <td className="px-4 py-3 text-center">{row.bag_type || "—"}</td>
-                        <td className="px-4 py-3 text-center font-mono">{row.bags ?? "—"}</td>
-                        <td className="px-4 py-3 text-center font-mono">{row.kgs ?? "—"}</td>
-                        <td className="px-4 py-3 text-left">{row.farmer_name}</td>
-                        <td className="px-4 py-3 text-left text-muted-foreground">{row.village}</td>
-                        <td className="px-4 py-3 text-center font-mono">₹{formatExact(row.price_per_unit)}</td>
-                        <td className="px-4 py-3 text-center">{row.trader_name}</td>
-                        <td className="px-4 py-3 text-center">{row.bazaar != null ? row.bazaar : "—"}</td>
-                        <td className="px-4 py-3">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
+                      <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="hover:bg-muted/40 cursor-pointer transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground font-semibold whitespace-nowrap">
+                          <span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{formatDate(row.date) || "—"}</td>
+                        <td className="px-4 py-3 text-center font-medium whitespace-nowrap">{row.crop_type || "—"}</td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">{row.bag_type || "—"}</td>
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap">{row.bags ?? "—"}</td>
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap">{row.kgs ?? "—"}</td>
+                        <td className="px-4 py-3 text-left whitespace-nowrap">{row.farmer_name}</td>
+                        <td className="px-4 py-3 text-left text-muted-foreground whitespace-nowrap">{row.village}</td>
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap text-green-700 font-medium">₹{formatExact(row.price_per_unit)}</td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">{row.trader_name}</td>
+                        <td className="px-4 py-3 text-center font-medium whitespace-nowrap text-accent-foreground">{row.bazaar != null ? row.bazaar : "—"}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </td>
@@ -431,7 +406,6 @@ export default function KantaBook() {
                     ))}
                   </tbody>
                 </table>
-                </div>
               </div>
             </div>
           )}

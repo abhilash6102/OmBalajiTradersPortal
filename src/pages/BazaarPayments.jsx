@@ -184,7 +184,7 @@ export default function BazaarPayments() {
 
   const filtered = payments.filter((p) => {
     const matchTrader = !searchTrader || p.trader_name?.toLowerCase().includes(searchTrader.toLowerCase());
-    const matchAmount = !searchAmount || String(Math.round(p.amount || 0)).includes(searchAmount); // Added amount filter logic
+    const matchAmount = !searchAmount || String(Math.round(p.amount || 0)).includes(searchAmount); 
     const matchDate = !dateFilter || p.crop_date === dateFilter;
     const matchStatus = statusFilter === "all" || (statusFilter === "credited" ? p.is_credited : !p.is_credited);
     return matchTrader && matchAmount && matchDate && matchStatus;
@@ -261,15 +261,15 @@ export default function BazaarPayments() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-muted/50 border-b border-border text-left uppercase text-xs font-bold text-muted-foreground">
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Book - Bill.NO</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trader</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Crop</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Expected By</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Amount (₹)</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bank</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Credited On</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"></th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Book - Bill.NO</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Trader</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Crop</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Expected By</th>
+                          <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Amount (₹)</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Bank</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Status</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Credited On</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -277,15 +277,16 @@ export default function BazaarPayments() {
                            const overdue = !payment.is_credited && isOverdue(payment.expected_payment_date);
                            return (
                             <tr key={payment._id || payment.id} onClick={() => handleEdit(payment)} className={`border-b border-border hover:bg-muted/20 cursor-pointer transition-colors ${overdue ? "bg-red-50/40" : ""}`}>
-                              <td className="px-4 py-4 text-muted-foreground font-medium"><span className="text-primary">{payment.book_no || 1}</span> - {payment.sl_no ?? "—"}</td>
-                              <td className="px-4 py-4 font-medium">{payment.trader_name}</td>
-                              <td className="px-4 py-4">{payment.crop_type}</td>
-                              <td className={`px-4 py-4 font-mono ${overdue ? "text-destructive font-bold" : "text-muted-foreground"}`}>{formatDate(payment.expected_payment_date)}</td>
-                              <td className="px-4 py-4 font-mono font-bold text-primary text-right">₹{format2(payment.amount)}</td>
-                              <td className="px-4 py-4">{payment.bank ? <Badge className={BANK_COLORS[payment.bank]}>{BANK_LABELS[payment.bank]}</Badge> : "—"}</td>
-                              <td className="px-4 py-4">{payment.is_credited ? <Badge className="bg-green-100 text-green-700">Credited</Badge> : <Badge className="bg-amber-100 text-amber-700">Pending</Badge>}</td>
+                              {/* 🔥 whitespace-nowrap added below to keep everything in straight line */}
+                              <td className="px-4 py-4 text-muted-foreground font-medium whitespace-nowrap"><span className="text-primary">{payment.book_no || 1}</span> - {payment.sl_no ?? "—"}</td>
+                              <td className="px-4 py-4 font-medium whitespace-nowrap">{payment.trader_name}</td>
+                              <td className="px-4 py-4 whitespace-nowrap">{payment.crop_type}</td>
+                              <td className={`px-4 py-4 font-mono whitespace-nowrap ${overdue ? "text-destructive font-bold" : "text-muted-foreground"}`}>{formatDate(payment.expected_payment_date)}</td>
+                              <td className="px-4 py-4 font-mono font-bold text-primary text-right whitespace-nowrap">₹{format2(payment.amount)}</td>
+                              <td className="px-4 py-4 whitespace-nowrap">{payment.bank ? <Badge className={BANK_COLORS[payment.bank]}>{BANK_LABELS[payment.bank]}</Badge> : "—"}</td>
+                              <td className="px-4 py-4 whitespace-nowrap">{payment.is_credited ? <Badge className="bg-green-100 text-green-700">Credited</Badge> : <Badge className="bg-amber-100 text-amber-700">Pending</Badge>}</td>
                               <td className="px-4 py-4 text-muted-foreground whitespace-nowrap">{formatDate(payment.credited_date)}</td>
-                              <td className="px-4 py-4">
+                              <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-2">
                                   {payment.is_credited ?
                                     <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={(e) => { e.stopPropagation(); handleUnmark(payment); }}>Unmark</Button> :
@@ -302,8 +303,8 @@ export default function BazaarPayments() {
                   </div>
                 </div>
               )}
-            </div>
-          ))}
+              </div>
+            ))}
         </>
       )}
 

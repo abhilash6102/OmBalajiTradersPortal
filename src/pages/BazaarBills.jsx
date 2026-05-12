@@ -278,14 +278,14 @@ export default function BazaarBills() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-muted/50 border-b border-border uppercase text-xs font-semibold text-muted-foreground">
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-left">Book - Bill.No</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">Amount (₹)</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Quintals</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Kgs</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Bags</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Bag Type</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Crop</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Price/Unit</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-left whitespace-nowrap">Book - Bill.No</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right whitespace-nowrap">Amount (₹)</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Quintals</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Kgs</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Bags</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Bag Type</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Crop</th>
+                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Price/Unit</th>
                           <th className="px-4 py-3 w-10"></th>
                         </tr>
                       </thead>
@@ -296,7 +296,7 @@ export default function BazaarBills() {
                           return (
                             <React.Fragment key={bIdx}>
                               <tr className="bg-primary/5 border-y border-border">
-                                <td colSpan={9} className="px-4 py-2 text-sm font-medium">
+                                <td colSpan={9} className="px-4 py-2 text-sm font-medium whitespace-nowrap">
                                   <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {bill.trader_name}
                                 </td>
                               </tr>
@@ -308,34 +308,34 @@ export default function BazaarBills() {
                                   <React.Fragment key={cropName}>
                                     {rows.map((row) => (
                                       <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer">
-                                        <td className="px-4 py-2.5"></td>
-                                        <td className="px-4 py-2.5 text-right font-mono font-bold text-primary">₹{formatMoney(row.sub_total || row.net_amount || 0)}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono">{row.quintals ?? "—"}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono">{row.kgs ?? "—"}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono">{row.bags ?? "—"}</td>
-                                        <td className="px-4 py-2.5 text-center">{row.bag_type || "—"}</td>
-                                        <td className="px-4 py-2.5 text-center font-medium">{row.crop_type}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono">₹{formatExact(row.price_per_unit)}</td>
-                                        <td className="px-4 py-2.5 text-center">
+                                        <td className="px-4 py-2.5 whitespace-nowrap"></td>
+                                        <td className="px-4 py-2.5 text-right font-mono font-bold text-primary whitespace-nowrap">₹{formatMoney(row.sub_total || row.net_amount || 0)}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.quintals ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.kgs ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.bags ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-center whitespace-nowrap">{row.bag_type || "—"}</td>
+                                        <td className="px-4 py-2.5 text-center font-medium whitespace-nowrap">{row.crop_type}</td>
+                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">₹{formatExact(row.price_per_unit)}</td>
+                                        <td className="px-4 py-2.5 text-center whitespace-nowrap">
                                           <button onClick={e => { e.stopPropagation(); handleDelete(row._id || row.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></button>
                                         </td>
                                       </tr>
                                     ))}
                                     <tr className="bg-blue-50/40 text-[10px] font-bold text-blue-700 uppercase">
-                                      <td className="px-4 py-1.5"></td>
-                                      <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropSubtotal)}</td>
-                                      <td colSpan={2} className="px-4 py-2.5 text-left pl-6  font-mono text-sm tracking-wide">CROP TOTAL ({cropName})</td>
-                                      <td className="px-4 py-1.5 text-center font-mono text-sm">{totalBags}</td>
-                                      <td colSpan={4} className="px-4 py-1.5 font-mono text-sm text-left pl-4">TOTAL BAGS</td>
+                                      <td className="px-4 py-1.5 whitespace-nowrap"></td>
+                                      <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropSubtotal)} </td>
+                                      <td colSpan={2} className="px-4 py-2.5 text-left pl-6 font-mono text-sm tracking-wide whitespace-nowrap">CROP TOTAL</td>
+                                      <td className="px-4 py-1.5 text-center font-mono text-sm whitespace-nowrap">{totalBags}</td>
+                                      <td colSpan={4} className="px-4 py-1.5 font-mono text-sm text-left pl-4 whitespace-nowrap">TOTAL BAGS</td>
                                     </tr>
                                   </React.Fragment>
                                 );
                               })}
                               {cropEntries.length > 1 && (
                                 <tr className="bg-muted/30 border-b-2 border-primary/20 font-bold">
-                                  <td className="px-4 py-2"></td>
-                                  <td className="px-4 py-2 text-right font-mono text-primary text-base">₹{formatMoney(billTotal)}</td>
-                                  <td colSpan={7} className="px-4 py-2 text-left pl-6 text-primary tracking-tighter text-xs">GRAND BILL TOTAL</td>
+                                  <td className="px-4 py-2 whitespace-nowrap"></td>
+                                  <td className="px-4 py-2 text-right font-mono text-primary text-base whitespace-nowrap">₹{formatMoney(billTotal)}</td>
+                                  <td colSpan={7} className="px-4 py-2 text-left pl-6 text-primary tracking-tighter text-xs whitespace-nowrap">GRAND BILL TOTAL</td>
                                 </tr>
                               )}
                             </React.Fragment>

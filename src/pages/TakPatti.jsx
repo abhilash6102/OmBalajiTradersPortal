@@ -449,6 +449,7 @@ export default function TakPatti() {
               commission: acc.commission + (row.commission || 0), hamali: acc.hamali + (row.hamali || 0),
               dharvay: acc.dharvay + (row.dharvay || 0), chata: acc.chata + (row.chata || 0), net_payable: acc.net_payable + (row.net_payable || 0),
             }), { commission: 0, hamali: 0, dharvay: 0, chata: 0, net_payable: 0 });
+            
             return (
               <div key={dateKey} className="mb-6">
                 <button type="button" onClick={() => toggleDate(dateKey)} className="flex items-center gap-2 mb-2 w-full text-left">
@@ -466,13 +467,17 @@ export default function TakPatti() {
                               Book - Sl.No
                             </th>
                             {["Date", "Farmer", "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
-                              // 🔥 Define which headers should be right-aligned
-                              const isMoney = ["Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)"].includes(h);
-                              
+                              // 🔥 Center these two
+                              const isCentered = h === "Crop" || h === "Sum (₹)";
+                              // 🔥 Keep the rest of the money on the right
+                              const isMoney = ["Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)"].includes(h);
+
                               return (
                                 <th 
                                   key={h} 
-                                  className={`${isMoney ? "text-right" : "text-left"} px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap`}
+                                  className={`px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap ${
+                                    isCentered ? "text-center" : isMoney ? "text-right" : "text-left"
+                                  }`}
                                 >
                                   {h}
                                 </th>
@@ -485,37 +490,38 @@ export default function TakPatti() {
                             const deductions = roundToInt((row.commission || 0) + (row.hamali || 0) + (row.dharvay || 0) + (row.chata || 0));
                             return (
                               <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors">
-                                <td className="px-3 py-3 text-muted-foreground font-semibold"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
+                                {/* 🔥 Added whitespace-nowrap to all <td> below to prevent breaking into multiple lines */}
+                                <td className="px-3 py-3 text-muted-foreground font-semibold whitespace-nowrap"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{formatDate(row.date) || "—"}</td>
                                 <td className="px-3 py-3 font-medium whitespace-nowrap">{row.farmer_name}</td>
-                                <td className="px-3 py-3 text-muted-foreground">{row.village}</td>
-                                <td className="px-3 py-3 text-center">{row.crop_type || "—"}</td>
-                                <td className="px-3 py-3 text-center">{row.bag_type || "—"}</td>
-                                <td className="px-3 py-3 text-center font-mono">{row.bags ?? "—"}</td>
-                                <td className="px-3 py-3 text-center font-mono">{row.kgs ?? "—"}</td>
-                                <td className="px-3 py-3 text-center font-mono">{row.quintals ?? "—"}</td>
-                                <td className="px-3 py-3 text-center font-mono">{row.leftover_kgs ?? "—"}</td>
-                                <td className="px-3 py-3 text-center font-mono">₹{formatExact(row.price_per_unit)}</td>
-                                <td className="px-3 py-3 text-right font-mono font-semibold">₹{formatMoney(row.sum_amount)}</td>
-                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.commission)}</td>
-                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.hamali)}</td>
-                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.dharvay)}</td>
-                                <td className="px-3 py-3 font-mono text-right">₹{formatMoney(row.chata)}</td>
-                                <td className="px-3 py-3 font-mono text-destructive text-right">₹{formatMoney(deductions)}</td>
-                                <td className="px-3 py-3 font-mono font-semibold text-primary text-right">₹{formatMoney(row.net_payable)}</td>
-                                <td className="px-3 py-3 "><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}><Trash2 className="w-4 h-4" /></Button></td>
+                                <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{row.village}</td>
+                                <td className="px-3 py-3 text-center whitespace-nowrap">{row.crop_type || "—"}</td>
+                                <td className="px-3 py-3 text-center whitespace-nowrap">{row.bag_type || "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono whitespace-nowrap">{row.bags ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono whitespace-nowrap">{row.kgs ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono whitespace-nowrap">{row.quintals ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono whitespace-nowrap">{row.leftover_kgs ?? "—"}</td>
+                                <td className="px-3 py-3 text-center font-mono whitespace-nowrap">₹{formatExact(row.price_per_unit)}</td>
+                                <td className="px-3 py-3 text-right font-mono font-semibold whitespace-nowrap">₹{formatMoney(row.sum_amount)}</td>
+                                <td className="px-3 py-3 font-mono text-right whitespace-nowrap">₹{formatMoney(row.commission)}</td>
+                                <td className="px-3 py-3 font-mono text-right whitespace-nowrap">₹{formatMoney(row.hamali)}</td>
+                                <td className="px-3 py-3 font-mono text-right whitespace-nowrap">₹{formatMoney(row.dharvay)}</td>
+                                <td className="px-3 py-3 font-mono text-right whitespace-nowrap">₹{formatMoney(row.chata)}</td>
+                                <td className="px-3 py-3 font-mono text-destructive text-right whitespace-nowrap">₹{formatMoney(deductions)}</td>
+                                <td className="px-3 py-3 font-mono font-semibold text-primary text-right whitespace-nowrap">₹{formatMoney(row.net_payable)}</td>
+                                <td className="px-3 py-3 whitespace-nowrap"><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}><Trash2 className="w-4 h-4" /></Button></td>
                               </tr>
                             );
                           })}
                           <tr className="bg-primary/10 border-t-2 border-primary/30 font-bold">
-                            <td colSpan={12} className="px-3 py-2.5 text-xs font-bold text-primary uppercase tracking-wide">✦ Totals</td>
-                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.commission)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.hamali)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.dharvay)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.chata)}</td>
-                            <td className="px-3 py-2.5 font-mono text-destructive text-right">₹{formatMoney(totals.commission + totals.hamali + totals.dharvay + totals.chata)}</td>
-                            <td className="px-3 py-2.5 font-mono text-primary text-right">₹{formatMoney(totals.net_payable)}</td>
-                            <td className="px-3 py-2.5"></td>
+                            <td colSpan={12} className="px-3 py-2.5 text-xs font-bold text-primary uppercase tracking-wide whitespace-nowrap">✦ Totals</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right whitespace-nowrap">₹{formatMoney(totals.commission)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right whitespace-nowrap">₹{formatMoney(totals.hamali)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right whitespace-nowrap">₹{formatMoney(totals.dharvay)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right whitespace-nowrap">₹{formatMoney(totals.chata)}</td>
+                            <td className="px-3 py-2.5 font-mono text-destructive text-right whitespace-nowrap">₹{formatMoney(totals.commission + totals.hamali + totals.dharvay + totals.chata)}</td>
+                            <td className="px-3 py-2.5 font-mono text-primary text-right whitespace-nowrap">₹{formatMoney(totals.net_payable)}</td>
+                            <td className="px-3 py-2.5 whitespace-nowrap"></td>
                           </tr>
                         </tbody>
                       </table>
