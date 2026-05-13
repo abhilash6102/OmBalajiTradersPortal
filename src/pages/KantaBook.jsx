@@ -42,7 +42,7 @@ function groupByDate(entries) {
     groups[key].push(e);
   });
   return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a)).map(([dateKey, rows]) => [
-    dateKey, 
+    dateKey,
     [...rows].sort((a, b) => {
       if (a.book_no !== b.book_no) return (a.book_no || 1) - (b.book_no || 1);
       return (a.sl_no ?? 999999) - (b.sl_no ?? 999999);
@@ -70,7 +70,7 @@ export default function KantaBook() {
       setEntries(data);
     } catch (err) { console.error("Failed to load Kanta Book", err); }
   };
-  
+
   useEffect(() => { load(); }, []);
 
   const getNextBookAndSlNo = async () => {
@@ -82,7 +82,7 @@ export default function KantaBook() {
       let maxBook = 1;
       data.forEach(item => { const b = parseInt(item.book_no, 10); if (!isNaN(b) && b > maxBook) maxBook = b; });
       const itemsInMaxBook = data.filter(item => parseInt(item.book_no, 10) === maxBook || (maxBook === 1 && !item.book_no));
-      
+
       let maxSl = 0;
       itemsInMaxBook.forEach(item => { const sl = parseInt(item.sl_no, 10); if (!isNaN(sl) && sl > maxSl) maxSl = sl; });
 
@@ -106,8 +106,8 @@ export default function KantaBook() {
 
     try {
       const bags = Number(form.bags) || 0;
-      const kgs = roundToInt(form.kgs); 
-      const price = toExactDec(form.price_per_unit); 
+      const kgs = roundToInt(form.kgs);
+      const price = toExactDec(form.price_per_unit);
       const bagWt = BAG_WEIGHTS[form.bag_type] || 0;
       const crop = form.crop_type || "";
 
@@ -127,134 +127,212 @@ export default function KantaBook() {
       const isBagCrop = crop !== "Cotton";
       const totalKg = isBagCrop ? (bags * bagWt) + kgs : kgs;
       const sumAmount = roundToInt((totalKg / 100) * price);
-      
+
       const labourBags = (isBagCrop && kgs > 20) ? bags + 1 : bags;
       const commission = roundToInt(sumAmount * COMMISSION_RATE);
       const hamali = roundToInt(labourBags * HAMALI_RATE(form.bag_type));
       const dharvay = roundToInt(labourBags * DHARVAY_RATE);
       const chata = roundToInt(labourBags * CHATA_RATE);
       const netPayable = roundToInt(sumAmount - commission - hamali - dharvay - chata);
-      
+
       const quintals = Math.floor(totalKg / 100);
       const leftoverKgs = roundToInt(totalKg % 100);
 
+      // ── 1. Save Kanta ──────────────────────────────────────────────────────
       if (editId) {
-        await fetch(`${API_BASE_URL}/kanta/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData) });
+        await fetch(`${API_BASE_URL}/kanta/${editId}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData)
+        });
       } else {
-        await fetch(`${API_BASE_URL}/kanta`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData) });
+        await fetch(`${API_BASE_URL}/kanta`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData)
+        });
       }
 
-      if (finalSlNo != null) {
-        const takRes = await fetch(`${API_BASE_URL}/takpatti`);
-        const takPattiAll = await takRes.json();
-        const matchingTP = takPattiAll.find(tp => Number(tp.sl_no) === Number(finalSlNo) && Number(tp.book_no || 1) === Number(finalBookNo));
-        const tpData = {
-          book_no: finalBookNo, sl_no: finalSlNo, date: form.date, farmer_name: form.farmer_name, village: form.village,
-          crop_type: crop, bag_type: form.bag_type, trader_name: form.trader_name, bags, kgs,
-          price_per_unit: price, sum_amount: sumAmount, commission, hamali, dharvay, chata,
-          net_payable: netPayable, quintals, leftover_kgs: leftoverKgs,
-        };
-        if (matchingTP) {
-          await fetch(`${API_BASE_URL}/takpatti/${matchingTP._id || matchingTP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData) });
-        } else {
-          await fetch(`${API_BASE_URL}/takpatti`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData) });
-        }
-
-        const padamRes1 = await fetch(`${API_BASE_URL}/padam`);
-        const padamAll1 = await padamRes1.json();
-        const existingCredit = padamAll1.find(p => p.type === "credit" && Number(p.sl_no) === Number(finalSlNo) && Number(p.book_no || 1) === Number(finalBookNo));
-        const creditData = { book_no: finalBookNo, sl_no: finalSlNo, date: form.date, type: "credit", party_name: form.farmer_name, village: form.village, amount: sumAmount, commission, hamali, dharvay, chata, net_amount: netPayable };
-        if (existingCredit) {
-           await fetch(`${API_BASE_URL}/padam/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
-        } else {
-           await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData) });
-        }
+      // ── 2. Sync TakPatti ───────────────────────────────────────────────────
+      const takRes = await fetch(`${API_BASE_URL}/takpatti`);
+      const takPattiAll = await takRes.json();
+      const matchingTP = takPattiAll.find(
+        tp => Number(tp.sl_no) === Number(finalSlNo) && Number(tp.book_no || 1) === Number(finalBookNo)
+      );
+      const tpData = {
+        book_no: finalBookNo, sl_no: finalSlNo, date: form.date,
+        farmer_name: form.farmer_name, village: form.village,
+        crop_type: crop, bag_type: form.bag_type, trader_name: form.trader_name,
+        bags, kgs, price_per_unit: price,
+        sum_amount: sumAmount, commission, hamali, dharvay, chata,
+        net_payable: netPayable, quintals, leftover_kgs: leftoverKgs,
+      };
+      if (matchingTP) {
+        await fetch(`${API_BASE_URL}/takpatti/${matchingTP._id || matchingTP.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData)
+        });
+      } else {
+        await fetch(`${API_BASE_URL}/takpatti`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tpData)
+        });
       }
 
-      try {
-        const bazaarBags = Number(form.bazaar) || 0;
-        let bazaarTotalKg = 0;
+      // ── 3. Sync Padam CREDIT (Farmer side) ────────────────────────────────
+      const padamRes1 = await fetch(`${API_BASE_URL}/padam`);
+      const padamAll1 = await padamRes1.json();
+      const existingCredit = padamAll1.find(
+        p => p.type === "credit" && Number(p.sl_no) === Number(finalSlNo) && Number(p.book_no || 1) === Number(finalBookNo)
+      );
+      const creditData = {
+        book_no: finalBookNo, sl_no: finalSlNo, date: form.date,
+        type: "credit", party_name: form.farmer_name, village: form.village,
+        amount: sumAmount, commission, hamali, dharvay, chata, net_amount: netPayable
+      };
+      if (existingCredit) {
+        await fetch(`${API_BASE_URL}/padam/${existingCredit._id || existingCredit.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData)
+        });
+      } else {
+        await fetch(`${API_BASE_URL}/padam`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(creditData)
+        });
+      }
 
-        if (crop === "Cotton") {
-           bazaarTotalKg = bags > 0 ? toDec((kgs / bags) * bazaarBags) : kgs;
-        } else {
-           bazaarTotalKg = toDec(bazaarBags * bagWt);
+      // ── 4. Compute Bazaar Bill numbers ─────────────────────────────────────
+      const bazaarBags = Number(form.bazaar) || 0;
+      let bazaarTotalKg = 0;
+      if (crop === "Cotton") {
+        bazaarTotalKg = bags > 0 ? toDec((kgs / bags) * bazaarBags) : kgs;
+      } else {
+        bazaarTotalKg = toDec(bazaarBags * bagWt);
+      }
+      const bQuintals = Math.floor(bazaarTotalKg / 100);
+      const bLeftoverKgs = roundToInt(bazaarTotalKg % 100);
+      const bbNet = roundToInt((bazaarTotalKg / 100) * price);
+
+      const bazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+      const bazaarAll = await bazaarRes.json();
+
+      // Find if a bazaar bill already exists for same date+trader+crop (to reuse book/bill numbers)
+      const existingBillForTrader = bazaarAll.find(
+        b => b.date === form.date && b.trader_name === form.trader_name && b.crop_type === crop
+      );
+
+      let uBook = 1, uBill = 1;
+      if (existingBillForTrader) {
+        uBook = parseInt(existingBillForTrader.book_no, 10) || 1;
+        const bNoStr = String(existingBillForTrader.bill_no || "1");
+        uBill = parseInt(bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr, 10) || 1;
+      } else {
+        let maxBk = 1;
+        bazaarAll.forEach(b => { const val = parseInt(b.book_no, 10); if (!isNaN(val) && val > maxBk) maxBk = val; });
+        const inMaxBk = bazaarAll.filter(b => parseInt(b.book_no, 10) === maxBk || (maxBk === 1 && !b.book_no));
+        let maxBl = 0;
+        inMaxBk.forEach(b => {
+          const bNoStr = String(b.bill_no || "0");
+          const val = parseInt(bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr, 10);
+          if (!isNaN(val) && val > maxBl) maxBl = val;
+        });
+        if (maxBl >= 100) { uBook = maxBk + 1; uBill = 1; }
+        else { uBook = maxBk; uBill = maxBl + 1; }
+      }
+
+      // ── 5. Sync Bazaar Bill record ─────────────────────────────────────────
+      const bbData = {
+        book_no: uBook, bill_no: uBill, kanta_sl_no: finalSlNo,
+        date: form.date, trader_name: form.trader_name, farmer_name: form.farmer_name,
+        crop_type: crop, bag_type: form.bag_type, bags: bazaarBags,
+        quintals: bQuintals, kgs: bLeftoverKgs,
+        price_per_unit: price, sub_total: bbNet, net_amount: bbNet, total_amount: bbNet
+      };
+
+      // Find existing bazaar bill by kanta_sl_no + book_no match
+      const existingBBRecord = bazaarAll.find(
+        b => Number(b.kanta_sl_no) === Number(finalSlNo) && Number(b.book_no || 1) === Number(uBook)
+      );
+      if (existingBBRecord) {
+        await fetch(`${API_BASE_URL}/bazaarbills/${existingBBRecord._id || existingBBRecord.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData)
+        });
+      } else if (bazaarBags > 0 || bLeftoverKgs > 0) {
+        await fetch(`${API_BASE_URL}/bazaarbills`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData)
+        });
+      }
+
+      // ── 6. Re-fetch fresh bazaar bills to get accurate day total ──────────
+      const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+      const freshBazaar = await freshBazaarRes.json();
+      const traderDayBills = freshBazaar.filter(
+        b => b.trader_name === form.trader_name && b.crop_type === crop && b.date === form.date
+      );
+      const dayTotal = traderDayBills.reduce((s, b) => s + (Number(b.sub_total) || Number(b.net_amount) || 0), 0);
+
+      // ── 7. Sync Bazaar Payment ─────────────────────────────────────────────
+      const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
+      const bpAll = await bpRes.json();
+      // Match by trader_name + crop_type + crop_date (NOT date — bazaarpayments uses crop_date)
+      const existingBP = bpAll.find(
+        bp => bp.trader_name === form.trader_name && bp.crop_type === crop && bp.crop_date === form.date
+      );
+
+      const expDate = new Date(form.date);
+      expDate.setDate(expDate.getDate() + (crop === "Castor Seeds" ? 10 : 20));
+      const expectedPaymentDate = expDate.toISOString().split("T")[0];
+
+      if (existingBP) {
+        // Only update amount if not yet credited
+        if (!existingBP.is_credited) {
+          await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...existingBP, amount: dayTotal })
+          });
         }
+      } else if (dayTotal > 0) {
+        await fetch(`${API_BASE_URL}/bazaarpayments`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            book_no: uBook, sl_no: uBill,
+            trader_name: form.trader_name, crop_type: crop,
+            crop_date: form.date,
+            expected_payment_date: expectedPaymentDate,
+            amount: dayTotal,
+            is_credited: false
+          })
+        });
+      }
 
-        const bQuintals = Math.floor(bazaarTotalKg / 100);
-        const bLeftoverKgs = roundToInt(bazaarTotalKg % 100);
-        const bbNet = roundToInt((bazaarTotalKg / 100) * price);
+      // ── 8. Sync Padam DEBIT (Trader side) ─────────────────────────────────
+      const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
+      const padamAll2 = await padamRes2.json();
+      // Match by type=debit + trader_name + crop_type + date
+      const existingDebit = padamAll2.find(
+        p => p.type === "debit" &&
+          p.party_name === form.trader_name &&
+          p.crop_type === crop &&
+          p.date === form.date
+      );
 
-        const bazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
-        const bazaarAll = await bazaarRes.json();
-        
-        let uBook = 1, uBill = 1;
-        
-        const existingBillForTrader = bazaarAll.find(b => b.date === form.date && b.trader_name === form.trader_name && b.crop_type === crop);
-        
-        if (existingBillForTrader) {
-            uBook = parseInt(existingBillForTrader.book_no, 10) || 1;
-            uBill = parseInt(String(existingBillForTrader.bill_no).replace(/.*-/, ''), 10) || 1;
-        } else {
-            let maxBk = 1;
-            bazaarAll.forEach(b => { const val = parseInt(b.book_no, 10); if (!isNaN(val) && val > maxBk) maxBk = val; });
-            const inMaxBk = bazaarAll.filter(b => parseInt(b.book_no, 10) === maxBk || (maxBk === 1 && !b.book_no));
-            let maxBl = 0;
-            inMaxBk.forEach(b => { 
-                const bNoStr = String(b.bill_no || "0");
-                const val = parseInt(bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr, 10);
-                if (!isNaN(val) && val > maxBl) maxBl = val; 
-            });
-            if (maxBl >= 100) { uBook = maxBk + 1; uBill = 1; }
-            else { uBook = maxBk; uBill = maxBl + 1; }
-        }
+      if (existingDebit) {
+        await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...existingDebit,
+            amount: dayTotal,
+            net_amount: dayTotal
+          })
+        });
+      } else if (dayTotal > 0) {
+        await fetch(`${API_BASE_URL}/padam`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            book_no: uBook, sl_no: uBill,
+            date: form.date, type: "debit",
+            party_name: form.trader_name,
+            crop_type: crop,
+            amount: dayTotal,
+            net_amount: dayTotal
+          })
+        });
+      }
 
-        const bbData = {
-            book_no: uBook, bill_no: uBill, kanta_sl_no: finalSlNo, 
-            date: form.date, trader_name: form.trader_name, farmer_name: form.farmer_name,
-            crop_type: crop, bag_type: form.bag_type, bags: bazaarBags, quintals: bQuintals,
-            kgs: bLeftoverKgs, price_per_unit: price, sub_total: bbNet, net_amount: bbNet, total_amount: bbNet
-        };
-        
-        const existingBBRecord = bazaarAll.find(b => b.kanta_sl_no === finalSlNo);
-        if (existingBBRecord) {
-            await fetch(`${API_BASE_URL}/bazaarbills/${existingBBRecord._id || existingBBRecord.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
-        } else if (bazaarBags > 0 || bLeftoverKgs > 0) {
-            await fetch(`${API_BASE_URL}/bazaarbills`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bbData) });
-        }
-
-        const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
-        const bpAll = await bpRes.json();
-        const existingBP = bpAll.find(bp => bp.trader_name === form.trader_name && bp.crop_type === crop && bp.crop_date === form.date);
-        
-        const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
-        const freshBazaar = await freshBazaarRes.json();
-        const traderDayBills = freshBazaar.filter(b => b.trader_name === form.trader_name && b.crop_type === crop && b.date === form.date);
-        const dayTotal = traderDayBills.reduce((s, b) => s + (b.sub_total || 0), 0);
-
-        if (existingBP) {
-            if (!existingBP.is_credited) {
-                await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: dayTotal }) });
-            }
-        } else if (dayTotal > 0) {
-            const expDate = new Date(form.date);
-            expDate.setDate(expDate.getDate() + (crop === "Castor Seeds" ? 10 : 20));
-            await fetch(`${API_BASE_URL}/bazaarpayments`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ book_no: uBook, sl_no: uBill, trader_name: form.trader_name, crop_type: crop, crop_date: form.date, expected_payment_date: expDate.toISOString().split("T")[0], amount: dayTotal, is_credited: false })
-            });
-        }
-
-        const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
-        const padamAll2 = await padamRes2.json();
-        const existingDebit = padamAll2.find(p => p.type === "debit" && p.party_name === form.trader_name && p.crop_type === crop && p.date === form.date);
-        if (existingDebit) {
-            await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: dayTotal, net_amount: dayTotal }) });
-        } else if (dayTotal > 0) {
-            await fetch(`${API_BASE_URL}/padam`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ book_no: uBook, sl_no: uBill, date: form.date, type: "debit", party_name: form.trader_name, crop_type: crop, amount: dayTotal, net_amount: dayTotal }) });
-        }
-      } catch (err) { console.warn("Sync failed:", err); }
-
+      // ── Done ───────────────────────────────────────────────────────────────
       setLoading(false);
       setForm(EMPTY_FORM);
       setEditId(null);
@@ -264,26 +342,99 @@ export default function KantaBook() {
     } catch (err) {
       console.error(err);
       setLoading(false);
-      alert("Save failed");
+      alert("Save failed: " + err.message);
     }
   };
 
   const handleEdit = (row) => {
     setForm({
-      book_no: row.book_no ?? 1, sl_no: row.sl_no ?? "", date: row.date ?? "", farmer_name: row.farmer_name ?? "",
-      village: row.village ?? "", crop_type: row.crop_type ?? "", bags: row.bags != null ? row.bags : "",
-      kgs: row.kgs != null ? row.kgs : "", bag_type: row.bag_type ?? "", price_per_unit: row.price_per_unit ?? "",
-      trader_name: row.trader_name ?? "", bazaar: row.bazaar ?? "",
+      book_no: row.book_no ?? 1, sl_no: row.sl_no ?? "", date: row.date ?? "",
+      farmer_name: row.farmer_name ?? "", village: row.village ?? "",
+      crop_type: row.crop_type ?? "", bags: row.bags != null ? row.bags : "",
+      kgs: row.kgs != null ? row.kgs : "", bag_type: row.bag_type ?? "",
+      price_per_unit: row.price_per_unit ?? "", trader_name: row.trader_name ?? "",
+      bazaar: row.bazaar ?? "",
     });
-    setEditId(row._id || row.id); 
+    setEditId(row._id || row.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // 🔥 COMPLETELY FIXED DELETION SYNC
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure?")) return;
-    await fetch(`${API_BASE_URL}/kanta/${id}`, { method: "DELETE" });
-    load();
+    if (!window.confirm("Are you sure you want to delete this entry? This action will remove related records in TakPatti, Bazaar Bills, and Padam.")) return;
+    try {
+      // 1. Get the kanta record to know what to cascade delete
+      const kantaRes = await fetch(`${API_BASE_URL}/kanta`);
+      const kantaAll = await kantaRes.json();
+      const itemToDelete = kantaAll.find(k => k._id === id || k.id === id);
+      
+      if (!itemToDelete) return;
+
+      const bNo = Number(itemToDelete.book_no || 1);
+      const sNo = Number(itemToDelete.sl_no);
+      const tName = itemToDelete.trader_name;
+      const cType = itemToDelete.crop_type;
+      const dDate = itemToDelete.date;
+
+      // 2. Delete Takpatti
+      const tpRes = await fetch(`${API_BASE_URL}/takpatti`);
+      const tpAll = await tpRes.json();
+      const tpToDelete = tpAll.find(tp => Number(tp.sl_no) === sNo && Number(tp.book_no || 1) === bNo);
+      if (tpToDelete) await fetch(`${API_BASE_URL}/takpatti/${tpToDelete._id || tpToDelete.id}`, { method: "DELETE" });
+
+      // 3. Delete Padam Credit
+      const padamRes = await fetch(`${API_BASE_URL}/padam`);
+      const padamAll = await padamRes.json();
+      const padamCredToDelete = padamAll.find(p => p.type === "credit" && Number(p.sl_no) === sNo && Number(p.book_no || 1) === bNo);
+      if (padamCredToDelete) await fetch(`${API_BASE_URL}/padam/${padamCredToDelete._id || padamCredToDelete.id}`, { method: "DELETE" });
+
+      // 4. Delete Bazaar Bills
+      const bbRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+      const bbAll = await bbRes.json();
+      const bbToDelete = bbAll.find(b => Number(b.kanta_sl_no) === sNo && Number(b.book_no || 1) === bNo);
+      if (bbToDelete) await fetch(`${API_BASE_URL}/bazaarbills/${bbToDelete._id || bbToDelete.id}`, { method: "DELETE" });
+
+      // 5. Delete the main Kanta Entry
+      await fetch(`${API_BASE_URL}/kanta/${id}`, { method: "DELETE" });
+
+      // 6. Recalculate Trader Totals for Padam Debit & Bazaar Payments
+      const freshBBRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+      const freshBBAll = await freshBBRes.json();
+      const dayTotal = freshBBAll.filter(b => b.trader_name === tName && b.crop_type === cType && b.date === dDate).reduce((s, b) => s + (Number(b.sub_total) || Number(b.net_amount) || 0), 0);
+
+      // Update or Delete Padam Debit
+      const freshPadamRes = await fetch(`${API_BASE_URL}/padam`);
+      const freshPadamAll = await freshPadamRes.json();
+      const existingDebit = freshPadamAll.find(p => p.type === "debit" && p.party_name === tName && p.crop_type === cType && p.date === dDate);
+      
+      if (existingDebit) {
+          if (dayTotal > 0) {
+              await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: dayTotal, net_amount: dayTotal }) });
+          } else {
+              await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, { method: "DELETE" });
+          }
+      }
+
+      // Update or Delete Bazaar Payments
+      const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
+      const bpAll = await bpRes.json();
+      const existingBP = bpAll.find(bp => bp.trader_name === tName && bp.crop_type === cType && bp.crop_date === dDate);
+      
+      if (existingBP) {
+          if (dayTotal > 0) {
+              if (!existingBP.is_credited) {
+                  await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingBP, amount: dayTotal }) });
+              }
+          } else {
+              await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, { method: "DELETE" });
+          }
+      }
+
+      load();
+    } catch (err) {
+      console.error("Delete sync failed", err);
+    }
   };
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
@@ -304,7 +455,7 @@ export default function KantaBook() {
           <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button>
           <Button variant="outline" onClick={() => setShowPrint(true)}><Printer className="w-4 h-4 mr-2" /> Print</Button>
         </div>
-      </PageHeader> 
+      </PageHeader>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5 mb-6 shadow-sm">
@@ -335,7 +486,10 @@ export default function KantaBook() {
               </Select>
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Bags</Label><Input type="number" placeholder="No. of bags" value={form.bags} onChange={(e) => setField("bags", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">{(form.crop_type === "Cotton" || form.crop_type === "Castor Seeds") ? "Total Kgs" : "Extra Kgs"}</Label><Input type="number" step="any" placeholder="0" value={form.kgs === "" ? "" : form.kgs} onChange={(e) => setField("kgs", e.target.value)} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{(form.crop_type === "Cotton" || form.crop_type === "Castor Seeds") ? "Total Kgs" : "Extra Kgs"}</Label>
+              <Input type="number" step="any" placeholder="0" value={form.kgs === "" ? "" : form.kgs} onChange={(e) => setField("kgs", e.target.value)} />
+            </div>
             <div className="space-y-1.5"><Label className="text-xs">Bazaar Bags <span className="text-accent font-semibold">★</span></Label><Input type="number" placeholder="Bazaar bags" value={form.bazaar} onChange={(e) => setField("bazaar", e.target.value)} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Price / Unit (₹) <span className="text-destructive">*</span></Label><Input type="number" step="any" placeholder="0.00" value={form.price_per_unit} onChange={(e) => setField("price_per_unit", e.target.value)} required /></div>
             <div className="space-y-1.5"><Label className="text-xs">Trader Name <span className="text-destructive">*</span></Label><Input placeholder="Trader name" value={form.trader_name} onChange={(e) => setField("trader_name", e.target.value)} required /></div>

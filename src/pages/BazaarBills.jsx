@@ -13,7 +13,6 @@ const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", 
 const BAG_WEIGHTS = { "30kgs": 30, "35kgs": 35, "49kgs": 49, "59kgs": 59, "60kgs": 60 };
 const BAG_TYPE_OPTIONS = Object.keys(BAG_WEIGHTS);
 
-// 🔥 STRICT 2-DECIMAL HELPERS
 const roundToInt = (num) => Math.round(Number(num || 0));
 const toExactDec = (num) => Number(Number(num || 0).toFixed(2));
 const formatMoney = (num) => Math.round(Number(num || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -37,19 +36,19 @@ function groupBills(entries) {
   entries.forEach(e => {
     const d = e.date || "No Date";
     if (!byDate[d]) byDate[d] = {};
-    
+
     let rawBill = String(e.bill_no || "0");
     if (rawBill.includes("-")) rawBill = rawBill.split("-")[1];
-    
+
     const billKey = `${e.book_no || 1}-${rawBill}_${e.trader_name}`;
-    
+
     if (!byDate[d][billKey]) byDate[d][billKey] = {
       book_no: e.book_no || 1,
       bill_no: rawBill,
       trader_name: e.trader_name,
       crops: {}
     };
-    
+
     const c = e.crop_type || "Unknown";
     if (!byDate[d][billKey].crops[c]) byDate[d][billKey].crops[c] = [];
     byDate[d][billKey].crops[c].push(e);
@@ -78,7 +77,7 @@ export default function BazaarBills() {
       if (Array.isArray(data)) setEntries(data);
     } catch (err) { console.error("Failed to load Bazaar Bills", err); }
   };
-  
+
   useEffect(() => { load(); }, []);
 
   const getNextBookAndBillNo = async () => {
@@ -90,11 +89,11 @@ export default function BazaarBills() {
       let maxBook = 1;
       data.forEach(item => { const b = parseInt(item.book_no, 10); if (!isNaN(b) && b > maxBook) maxBook = b; });
       const itemsInMaxBook = data.filter(item => parseInt(item.book_no, 10) === maxBook || (maxBook === 1 && !item.book_no));
-      
+
       let maxBill = 0;
       itemsInMaxBook.forEach(item => {
         const bNoStr = String(item.bill_no || "0");
-        const bNo = bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr; 
+        const bNo = bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr;
         const val = parseInt(bNo, 10);
         if (!isNaN(val) && val > maxBill) maxBill = val;
       });
@@ -118,15 +117,15 @@ export default function BazaarBills() {
         const bags = Number(updated.bags) || 0;
         const kgs = roundToInt(updated.kgs);
         const price = toExactDec(updated.price_per_unit);
-        
+
         const isBagCrop = updated.crop_type !== "Cotton";
         const bagWt = BAG_WEIGHTS[updated.bag_type] || 0;
         const totalKg = toDec(isBagCrop ? (bags * bagWt) + kgs : kgs);
-        
+
         const quintals = Math.floor(totalKg / 100);
         const leftoverKgs = roundToInt(totalKg % 100);
         const sub_total = roundToInt((totalKg / 100) * price);
-        
+
         return { ...updated, quintals, kgs: leftoverKgs, sub_total };
       }
       return updated;
@@ -146,26 +145,99 @@ export default function BazaarBills() {
         finalBookNo = next.book_no;
         rawBillNo = String(next.bill_no);
       }
-      
-      const finalBillNo = rawBillNo.includes("-") ? parseInt(rawBillNo.split("-")[1], 10) : parseInt(rawBillNo, 10);
 
+      const finalBillNo = rawBillNo.includes("-")
+        ? parseInt(rawBillNo.split("-")[1], 10)
+        : parseInt(rawBillNo, 10);
+
+      const subTotal = roundToInt(form.sub_total);
       const billData = {
-        ...form, book_no: finalBookNo, bill_no: finalBillNo, bags: Number(form.bags) || 0, 
-        quintals: Number(form.quintals) || 0, kgs: roundToInt(form.kgs), price_per_unit: toExactDec(form.price_per_unit),
-        sub_total: roundToInt(form.sub_total), net_amount: roundToInt(form.sub_total) 
+        ...form, book_no: finalBookNo, bill_no: finalBillNo,
+        bags: Number(form.bags) || 0,
+        quintals: Number(form.quintals) || 0,
+        kgs: roundToInt(form.kgs),
+        price_per_unit: toExactDec(form.price_per_unit),
+        sub_total: subTotal,
+        net_amount: subTotal,
+        total_amount: subTotal,
       };
 
       if (editId) {
-        await fetch(`${API_BASE_URL}/bazaarbills/${editId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData) });
+        await fetch(`${API_BASE_URL}/bazaarbills/${editId}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData)
+        });
       } else {
-        await fetch(`${API_BASE_URL}/bazaarbills`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData) });
+        await fetch(`${API_BASE_URL}/bazaarbills`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(billData)
+        });
+      }
 
-        const expectedDate = new Date(form.date);
-        expectedDate.setDate(expectedDate.getDate() + (form.crop_type === "Castor Seeds" ? 10 : 20));
-        
+      // ── After save: recalculate day total and sync BazaarPayments + Padam Debit ──
+      const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+      const freshBazaar = await freshBazaarRes.json();
+      const traderDayBills = freshBazaar.filter(
+        b => b.trader_name === form.trader_name && b.crop_type === form.crop_type && b.date === form.date
+      );
+      const dayTotal = traderDayBills.reduce((s, b) => s + (Number(b.sub_total) || Number(b.net_amount) || 0), 0);
+
+      // Sync BazaarPayments
+      const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
+      const bpAll = await bpRes.json();
+      const existingBP = bpAll.find(
+        bp => bp.trader_name === form.trader_name && bp.crop_type === form.crop_type && bp.crop_date === form.date
+      );
+
+      const expDate = new Date(form.date);
+      expDate.setDate(expDate.getDate() + (form.crop_type === "Castor Seeds" ? 10 : 20));
+      const expectedPaymentDate = expDate.toISOString().split("T")[0];
+
+      if (existingBP) {
+        if (!existingBP.is_credited) {
+          await fetch(`${API_BASE_URL}/bazaarpayments/${existingBP._id || existingBP.id}`, {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...existingBP, amount: dayTotal })
+          });
+        }
+      } else if (dayTotal > 0) {
         await fetch(`${API_BASE_URL}/bazaarpayments`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ book_no: finalBookNo, sl_no: finalBillNo, trader_name: form.trader_name, crop_type: form.crop_type, crop_date: form.date, expected_payment_date: expectedDate.toISOString().split("T")[0], amount: roundToInt(form.sub_total), is_credited: false }),
+          body: JSON.stringify({
+            book_no: finalBookNo, sl_no: finalBillNo,
+            trader_name: form.trader_name, crop_type: form.crop_type,
+            crop_date: form.date,
+            expected_payment_date: expectedPaymentDate,
+            amount: dayTotal,
+            is_credited: false
+          })
+        });
+      }
+
+      // Sync Padam Debit
+      const padamRes = await fetch(`${API_BASE_URL}/padam`);
+      const padamAll = await padamRes.json();
+      const existingDebit = padamAll.find(
+        p => p.type === "debit" &&
+          p.party_name === form.trader_name &&
+          p.crop_type === form.crop_type &&
+          p.date === form.date
+      );
+
+      if (existingDebit) {
+        await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...existingDebit, amount: dayTotal, net_amount: dayTotal })
+        });
+      } else if (dayTotal > 0) {
+        await fetch(`${API_BASE_URL}/padam`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            book_no: finalBookNo, sl_no: finalBillNo,
+            date: form.date, type: "debit",
+            party_name: form.trader_name,
+            crop_type: form.crop_type,
+            amount: dayTotal,
+            net_amount: dayTotal
+          })
         });
       }
 
@@ -174,7 +246,11 @@ export default function BazaarBills() {
       setEditId(null);
       setShowForm(false);
       load();
-    } catch (err) { console.error(err); setLoading(false); alert("Save failed"); }
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+      alert("Save failed: " + err.message);
+    }
   };
 
   const handleEdit = (row) => {
@@ -182,9 +258,12 @@ export default function BazaarBills() {
     if (bNo.includes("-")) bNo = bNo.split("-")[1];
 
     setForm({
-      book_no: row.book_no ?? 1, bill_no: bNo, date: row.date ?? "", trader_name: row.trader_name ?? "", farmer_name: row.farmer_name ?? "",
-      crop_type: row.crop_type ?? "", bag_type: row.bag_type ?? "", bags: row.bags ?? "",
-      quintals: row.quintals ?? "", kgs: row.kgs ?? "", price_per_unit: row.price_per_unit ?? "", sub_total: row.sub_total ?? row.net_amount ?? "",
+      book_no: row.book_no ?? 1, bill_no: bNo, date: row.date ?? "",
+      trader_name: row.trader_name ?? "", farmer_name: row.farmer_name ?? "",
+      crop_type: row.crop_type ?? "", bag_type: row.bag_type ?? "",
+      bags: row.bags ?? "", quintals: row.quintals ?? "",
+      kgs: row.kgs ?? "", price_per_unit: row.price_per_unit ?? "",
+      sub_total: row.sub_total ?? row.net_amount ?? "",
     });
     setEditId(row._id || row.id);
     setShowForm(true);
@@ -193,16 +272,17 @@ export default function BazaarBills() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete record?")) return;
-    try { 
-      await fetch(`${API_BASE_URL}/bazaarbills/${id}`, { method: "DELETE" }); 
-      load(); 
+    try {
+      await fetch(`${API_BASE_URL}/bazaarbills/${id}`, { method: "DELETE" });
+      load();
     } catch (err) { console.error("Delete failed", err); }
   };
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
   const filtered = entries.filter(e =>
-    (!dateFilter || e.date === dateFilter) && (!traderFilter || e.trader_name?.toLowerCase().includes(traderFilter.toLowerCase()))
+    (!dateFilter || e.date === dateFilter) &&
+    (!traderFilter || e.trader_name?.toLowerCase().includes(traderFilter.toLowerCase()))
   );
 
   const grouped = groupBills(filtered);
@@ -317,13 +397,15 @@ export default function BazaarBills() {
                                         <td className="px-4 py-2.5 text-center font-medium whitespace-nowrap">{row.crop_type}</td>
                                         <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">₹{formatExact(row.price_per_unit)}</td>
                                         <td className="px-4 py-2.5 text-center whitespace-nowrap">
-                                          <button onClick={e => { e.stopPropagation(); handleDelete(row._id || row.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></button>
+                                          <button onClick={e => { e.stopPropagation(); handleDelete(row._id || row.id); }} className="text-destructive">
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
                                         </td>
                                       </tr>
                                     ))}
                                     <tr className="bg-blue-50/40 text-[10px] font-bold text-blue-700 uppercase">
                                       <td className="px-4 py-1.5 whitespace-nowrap"></td>
-                                      <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropSubtotal)} </td>
+                                      <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropSubtotal)}</td>
                                       <td colSpan={2} className="px-4 py-2.5 text-left pl-6 font-mono text-sm tracking-wide whitespace-nowrap">CROP TOTAL</td>
                                       <td className="px-4 py-1.5 text-center font-mono text-sm whitespace-nowrap">{totalBags}</td>
                                       <td colSpan={4} className="px-4 py-1.5 font-mono text-sm text-left pl-4 whitespace-nowrap">TOTAL BAGS</td>

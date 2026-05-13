@@ -294,10 +294,10 @@ export default function Padam() {
                               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                                 <span className="text-green-700 font-medium">{row.book_no || 1} </span>- {row.sl_no ?? "—"} 
                               </td>
-                              <td className="px-4 py-3 font-medium text-foreground">{row.party_name}</td>
-                              <td className="px-4 py-3 text-muted-foreground">{row.village || "—"}</td>
-                              <td className="px-4 py-3 text-right font-mono font-semibold text-green-700">₹{formatMoney(row.net_amount || row.amount)}</td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{row.party_name}</td>
+                              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{row.village || "—"}</td>
+                              <td className="px-4 py-3 text-right font-mono font-semibold text-green-700 whitespace-nowrap">₹{formatMoney(row.net_amount || row.amount)}</td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap">
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -309,28 +309,28 @@ export default function Padam() {
                     </div>
                     <div className="bg-muted/30 p-4 border-t font-mono space-y-2 mt-auto">
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                        <span className="font-medium text-sm">Total Net Credit:</span> 
-                        <span className="font-semibold text-sm">₹{formatMoney(dTotalCreditNet)}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">Total Net Credit:</span> 
+                        <span className="font-semibold text-sm whitespace-nowrap">₹{formatMoney(dTotalCreditNet)}</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                        <span className="font-medium text-sm">Total Commission:</span> 
-                        <span className="font-semibold text-sm">₹{formatMoney(dTotalCreditComm)}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">Total Commission:</span> 
+                        <span className="font-semibold text-sm whitespace-nowrap">₹{formatMoney(dTotalCreditComm)}</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                        <span className="font-medium text-sm">Total Hamali:</span> 
-                        <span className="font-semibold text-sm">₹{formatMoney(dTotalCreditHamali)}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">Total Hamali:</span> 
+                        <span className="font-semibold text-sm whitespace-nowrap">₹{formatMoney(dTotalCreditHamali)}</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                        <span className="font-medium text-sm">Total Dharvay:</span> 
-                        <span className="font-semibold text-sm">₹{formatMoney(dTotalCreditDharvay)}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">Total Dharvay:</span> 
+                        <span className="font-semibold text-sm whitespace-nowrap">₹{formatMoney(dTotalCreditDharvay)}</span>
                       </div>
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                        <span className="font-medium text-sm">Total Chata:</span> 
-                        <span className="font-semibold text-sm">₹{formatMoney(dTotalCreditChata)}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">Total Chata:</span> 
+                        <span className="font-semibold text-sm whitespace-nowrap">₹{formatMoney(dTotalCreditChata)}</span>
                       </div>
 
-                      {dCreditShortfall > 0 && <div className="flex justify-between font-bold text-amber-600 pt-1 border-t border-dashed border-amber-300"><span>By Balance c/d:</span> <span>₹{formatMoney(dCreditShortfall)}</span></div>}
-                      <div className="flex justify-between font-bold text-sm text-green-800 pt-1 border-t-2 border-green-800"><span>Grand Total:</span> <span>₹{formatMoney(dGrandTotal)}</span></div>
+                      {dCreditShortfall > 0 && <div className="flex justify-between font-bold text-amber-600 pt-1 border-t border-dashed border-amber-300 whitespace-nowrap"><span>By Balance c/d:</span> <span>₹{formatMoney(dCreditShortfall)}</span></div>}
+                      <div className="flex justify-between font-bold text-sm text-green-800 pt-1 border-t-2 border-green-800 whitespace-nowrap"><span>Grand Total:</span> <span>₹{formatMoney(dGrandTotal)}</span></div>
                     </div>
                   </div>
 
@@ -351,10 +351,10 @@ export default function Padam() {
                           {dailyDebitEntries.map(row => (
                             <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b hover:bg-muted/20 cursor-pointer">
                               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap"><span className="text-red-700 font-medium">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
-                              <td className="px-4 py-3 font-medium text-foreground">{row.party_name}</td>
-                              <td className="px-4 py-3 text-muted-foreground">{row.crop_type || "—"}</td>
-                              <td className="px-4 py-3 text-right font-mono font-semibold text-red-700">₹{formatMoney(row.net_amount || row.amount)}</td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{row.party_name}</td>
+                              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{row.crop_type || "—"}</td>
+                              <td className="px-4 py-3 text-right font-mono font-semibold text-red-700 whitespace-nowrap">₹{formatMoney(row.net_amount || row.amount)}</td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap">
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}><Trash2 className="w-4 h-4" /></Button>
                               </td>
                             </tr>
@@ -364,11 +364,11 @@ export default function Padam() {
                     </div>
                     <div className="bg-muted/30 p-4 border-t font-mono space-y-2 mt-auto">
                       <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
-                        <span className="font-medium text-sm">Total Debit:</span> 
-                        <span className="font-semibold text-sm">₹{formatMoney(dTotalDebitNet)}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">Total Debit:</span> 
+                        <span className="font-semibold text-sm whitespace-nowrap">₹{formatMoney(dTotalDebitNet)}</span>
                       </div>
-                      {dDebitShortfall > 0 && <div className="flex justify-between font-bold text-amber-600 pt-1 border-t border-dashed border-amber-300"><span>To Balance c/d:</span> <span>₹{formatMoney(dDebitShortfall)}</span></div>}
-                      <div className="flex justify-between font-bold text-sm text-red-800 pt-1 border-t-2 border-red-800 mt-6"><span>Grand Total:</span> <span>₹{formatMoney(dGrandTotal)}</span></div>
+                      {dDebitShortfall > 0 && <div className="flex justify-between font-bold text-amber-600 pt-1 border-t border-dashed border-amber-300 whitespace-nowrap"><span>To Balance c/d:</span> <span>₹{formatMoney(dDebitShortfall)}</span></div>}
+                      <div className="flex justify-between font-bold text-sm text-red-800 pt-1 border-t-2 border-red-800 mt-6 whitespace-nowrap"><span>Grand Total:</span> <span>₹{formatMoney(dGrandTotal)}</span></div>
                     </div>
                   </div>
                 </div>
