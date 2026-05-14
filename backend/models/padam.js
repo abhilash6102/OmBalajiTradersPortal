@@ -13,7 +13,8 @@ const padamSchema = new mongoose.Schema(
     hamali: { type: Number },
     dharvay: { type: Number },
     chata: { type: Number },
-    net_amount: { type: Number, required: true }
+    net_amount: { type: Number, required: true },
+    kanta_entry_id: { type: String }
   },
   { timestamps: true }
 );

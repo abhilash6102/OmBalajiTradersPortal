@@ -2,12 +2,19 @@ import mongoose from "mongoose";
 
 const takPattiSchema = new mongoose.Schema(
   {
+    book_no: {
+      type: Number,
+      default: 1,
+      index: true
+    },
     sl_no: {
-      type: Number
+      type: Number,
+      required: true
     },
     date: {
-      type: String,
-      required: true
+      type: Date,
+      required: true,
+      index: true
     },
     farmer_name: {
       type: String,
@@ -61,7 +68,8 @@ const takPattiSchema = new mongoose.Schema(
     },
     leftover_kgs: {
       type: Number
-    }
+    },
+    kanta_entry_id: { type: String }
   },
   {
     timestamps: true

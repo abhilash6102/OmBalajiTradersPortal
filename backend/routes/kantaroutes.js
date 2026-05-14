@@ -29,12 +29,31 @@ router.get("/", async (req, res) => {
 
 
 // 🔹 DELETE ENTRY
+import Padam from "../models/padam.js";
+import BazaarPayment from "../models/bazaarpayments.js";
+import BazaarBill from "../models/bazaarbills.js";
+import Takpatti from "../models/takpatti.js";
+import Kanta from "../models/kantabook.js";
+
 router.delete("/:id", async (req, res) => {
   try {
-    await Kanta.findByIdAndDelete(req.params.id);
-    res.json({ message: "Deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const kantaId = req.params.id;
+
+    // 1. Delete main record
+    await Kanta.findByIdAndDelete(kantaId);
+
+    // 2. Cascade delete ALL related modules
+    await Padam.deleteMany({ kanta_entry_id: kantaId });
+    await BazaarPayment.deleteMany({ kanta_entry_id: kantaId });
+    await BazaarBill.deleteMany({ kanta_entry_id: kantaId });
+    await Takpatti.deleteMany({ kanta_entry_id: kantaId });
+
+    res.json({
+      message: "Kanta + all related records deleted successfully"
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

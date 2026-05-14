@@ -60,31 +60,37 @@ export default function Padam() {
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [collapsedDates, setCollapsedDates] = useState({});
+  const [allData, setAllData] = useState([]);
 
-  const load = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/padam`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        data.sort((a, b) => new Date(b.date) - new Date(a.date));
-        setEntries(data);
-      }
-    } catch (err) { console.error("Failed to load Padam entries", err); }
-  };
+const load = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/padam`);
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+      data.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setEntries(data);
+      setAllData(data); // 👈 important cache
+    }
+  } catch (err) {
+    console.error("Failed to load Padam entries", err);
+  }
+};
   
   useEffect(() => { load(); }, []);
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const getNextSlNo = async (type) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/padam`);
-      const data = await res.json();
-      const filteredData = data.filter(item => item.type === type);
-      const maxSl = filteredData.reduce((max, item) => Math.max(max, Number(item.sl_no || 0)), 0);
-      return maxSl + 1;
-    } catch (err) { return 1; }
-  };
+const getNextSlNo = (type) => {
+  const filtered = allData.filter(item => item.type === type);
+
+  const maxSl = filtered.reduce(
+    (max, item) => Math.max(max, Number(item.sl_no || 0)),
+    0
+  );
+
+  return maxSl + 1;
+};
 
   const handleAddNew = async () => {
     const nextSl = await getNextSlNo("credit");

@@ -15,7 +15,7 @@ router.post("/", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const data = await Padam.find().sort({ createdAt: -1 });
+    const data = await Padam.find().sort({ date: -1, createdAt: -1 });
     res.json(data);
   } catch (error) {
     res.status(500).json({ message: error.message });

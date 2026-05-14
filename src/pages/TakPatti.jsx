@@ -107,25 +107,36 @@ export default function TakPatti() {
   
   useEffect(() => { load(); }, []);
 
-  const getNextBookAndSlNo = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/takpatti`);
-      const data = await res.json();
-      if (!data || data.length === 0) return { book_no: 1, sl_no: 1 };
+const getNextBookAndSlNo = () => {
+  if (!entries.length) return { book_no: 1, sl_no: 1 };
 
-      let maxBook = 1;
-      data.forEach(item => { const b = parseInt(item.book_no, 10); if (!isNaN(b) && b > maxBook) maxBook = b; });
-      const itemsInMaxBook = data.filter(item => parseInt(item.book_no, 10) === maxBook || (maxBook === 1 && !item.book_no));
-      let maxSl = 0;
-      itemsInMaxBook.forEach(item => { const sl = parseInt(item.sl_no, 10); if (!isNaN(sl) && sl > maxSl) maxSl = sl; });
+  let maxBook = 1;
 
-      if (maxSl >= 100) return { book_no: maxBook + 1, sl_no: 1 }; 
-      return { book_no: maxBook, sl_no: maxSl + 1 };
-    } catch (err) { return { book_no: 1, sl_no: 1 }; }
-  };
+  entries.forEach(item => {
+    const b = Number(item.book_no);
+    if (b > maxBook) maxBook = b;
+  });
+
+  const currentBookItems = entries.filter(
+    item => Number(item.book_no) === maxBook
+  );
+
+  let maxSl = 0;
+
+  currentBookItems.forEach(item => {
+    const sl = Number(item.sl_no);
+    if (sl > maxSl) maxSl = sl;
+  });
+
+  if (maxSl >= 100) {
+    return { book_no: maxBook + 1, sl_no: 1 };
+  }
+
+  return { book_no: maxBook, sl_no: maxSl + 1 };
+};
 
   const handleAddNew = async () => {
-    const { book_no, sl_no } = await getNextBookAndSlNo();
+    const { book_no, sl_no } = getNextBookAndSlNo();
     setEditId(null);
     setForm({ ...EMPTY_FORM, book_no, sl_no });
     setShowForm(true);

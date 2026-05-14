@@ -99,23 +99,26 @@ export default function BazaarPayments() {
     });
   };
 
-  const handleAddNew = async () => {
-    const res = await fetch(`${API_BASE_URL}/bazaarpayments`);
-    const data = await res.json();
-    let nextBook = 1, nextSl = 1;
+  
+const handleAddNew = () => {
+  let nextBook = 1;
+  let nextSl = 1;
 
-    if (data && data.length > 0) {
-      nextBook = Math.max(...data.map(p => parseInt(p.book_no || 1)));
-      const inMaxBook = data.filter(p => parseInt(p.book_no || 1) === nextBook);
-      nextSl = Math.max(...inMaxBook.map(p => parseInt(p.sl_no || 0))) + 1;
-      if (nextSl > 100) { nextBook += 1; nextSl = 1; }
+  if (payments.length > 0) {
+    nextBook = Math.max(...payments.map(p => Number(p.book_no || 1)));
+
+    const inMaxBook = payments.filter(p => Number(p.book_no || 1) === nextBook);
+    nextSl = Math.max(...inMaxBook.map(p => Number(p.sl_no || 0))) + 1;
+
+    if (nextSl > 100) {
+      nextBook += 1;
+      nextSl = 1;
     }
+  }
 
-    const today = new Date().toISOString().split("T")[0];
-    setEditId(null);
-    setForm({ ...EMPTY_FORM, book_no: nextBook, sl_no: nextSl, crop_date: today });
-    setShowForm(true);
-  };
+  setForm({ ...EMPTY_FORM, book_no: nextBook, sl_no: nextSl });
+  setShowForm(true);
+};
 
   const handleEdit = (payment) => {
     setEditId(payment._id || payment.id);
@@ -127,6 +130,9 @@ export default function BazaarPayments() {
       crop_date: payment.crop_date || "",
       expected_payment_date: payment.expected_payment_date || "",
       amount: payment.amount || "",
+      bank: payment.bank || "",
+      is_credited: payment.is_credited || false,
+      credited_date: payment.credited_date || ""
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });

@@ -41,8 +41,12 @@ router.put("/:id", async (req, res) => {
     const updated = await TakPatti.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Entry not found" });
+    }
 
     res.json(updated);
   } catch (error) {

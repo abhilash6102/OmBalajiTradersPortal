@@ -40,24 +40,28 @@ function groupBills(entries) {
     let rawBill = String(e.bill_no || "0");
     if (rawBill.includes("-")) rawBill = rawBill.split("-")[1];
 
-    const billKey = `${e.book_no || 1}-${rawBill}_${e.trader_name}`;
+    // 🔥 FIX: Convert trader name to lowercase for case-insensitive grouping
+    const normalizedTrader = (e.trader_name || "").toLowerCase();
+    const billKey = `${e.book_no || 1}-${rawBill}_${normalizedTrader}`;
 
-    if (!byDate[d][billKey]) byDate[d][billKey] = {
-      book_no: e.book_no || 1,
-      bill_no: rawBill,
-      trader_name: e.trader_name,
-      crops: {}
-    };
-
-    const c = e.crop_type || "Unknown";
-    if (!byDate[d][billKey].crops[c]) byDate[d][billKey].crops[c] = [];
-    byDate[d][billKey].crops[c].push(e);
+    if (!byDate[d][billKey]) {
+      byDate[d][billKey] = {
+        book_no: e.book_no || 1,
+        bill_no: rawBill,
+        trader_name: e.trader_name, // Keep original case for display
+        entries: []
+      };
+    }
+    
+    byDate[d][billKey].entries.push(e);
   });
 
-  return Object.entries(byDate).sort(([a], [b]) => b.localeCompare(a)).map(([date, billsObj]) => {
-    const bills = Object.values(billsObj).sort((a, b) => parseInt(a.bill_no, 10) - parseInt(b.bill_no, 10));
-    return { date, bills };
-  });
+  return Object.entries(byDate)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, billsObj]) => {
+      const bills = Object.values(billsObj).sort((a, b) => parseInt(a.bill_no, 10) - parseInt(b.bill_no, 10));
+      return { date, bills };
+    });
 }
 
 export default function BazaarBills() {
@@ -80,31 +84,37 @@ export default function BazaarBills() {
 
   useEffect(() => { load(); }, []);
 
-  const getNextBookAndBillNo = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/bazaarbills`);
-      const data = await res.json();
-      if (!data || data.length === 0) return { book_no: 1, bill_no: 1 };
+const getNextBookAndBillNo = () => {
+  if (!entries || entries.length === 0) return { book_no: 1, bill_no: 1 };
 
-      let maxBook = 1;
-      data.forEach(item => { const b = parseInt(item.book_no, 10); if (!isNaN(b) && b > maxBook) maxBook = b; });
-      const itemsInMaxBook = data.filter(item => parseInt(item.book_no, 10) === maxBook || (maxBook === 1 && !item.book_no));
+  let maxBook = 1;
 
-      let maxBill = 0;
-      itemsInMaxBook.forEach(item => {
-        const bNoStr = String(item.bill_no || "0");
-        const bNo = bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr;
-        const val = parseInt(bNo, 10);
-        if (!isNaN(val) && val > maxBill) maxBill = val;
-      });
+  entries.forEach(item => {
+    const b = parseInt(item.book_no, 10);
+    if (!isNaN(b) && b > maxBook) maxBook = b;
+  });
 
-      if (maxBill >= 100) return { book_no: maxBook + 1, bill_no: 1 };
-      return { book_no: maxBook, bill_no: maxBill + 1 };
-    } catch (err) { return { book_no: 1, bill_no: 1 }; }
-  };
+  // 🔥 FIX: Normalize trader name for comparison
+  const itemsInMaxBook = entries.filter(item => 
+    parseInt(item.book_no, 10) === maxBook || (maxBook === 1 && !item.book_no)
+  );
 
-  const handleAddNew = async () => {
-    const { book_no, bill_no } = await getNextBookAndBillNo();
+  let maxBill = 0;
+
+  itemsInMaxBook.forEach(item => {
+    const bNoStr = String(item.bill_no || "0");
+    const bNo = bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr;
+    const val = parseInt(bNo, 10);
+    if (!isNaN(val) && val > maxBill) maxBill = val;
+  });
+
+  if (maxBill >= 100) return { book_no: maxBook + 1, bill_no: 1 };
+
+  return { book_no: maxBook, bill_no: maxBill + 1 };
+};
+
+  const handleAddNew = () => {
+    const { book_no, bill_no } = getNextBookAndBillNo();
     setEditId(null);
     setForm({ ...EMPTY_FORM, book_no, bill_no });
     setShowForm(true);
@@ -141,7 +151,7 @@ export default function BazaarBills() {
       let rawBillNo = String(form.bill_no).trim();
 
       if (!rawBillNo && !editId) {
-        const next = await getNextBookAndBillNo();
+        const next = getNextBookAndBillNo();
         finalBookNo = next.book_no;
         rawBillNo = String(next.bill_no);
       }
@@ -172,15 +182,15 @@ export default function BazaarBills() {
         });
       }
 
-      // ── After save: recalculate day total and sync BazaarPayments + Padam Debit ──
       const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
       const freshBazaar = await freshBazaarRes.json();
-      const traderDayBills = freshBazaar.filter(
-        b => b.trader_name === form.trader_name && b.crop_type === form.crop_type && b.date === form.date
-      );
+const traderDayBills = freshBazaar.filter(
+  b => b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && 
+       b.crop_type === form.crop_type && 
+       b.date === form.date
+);
       const dayTotal = traderDayBills.reduce((s, b) => s + (Number(b.sub_total) || Number(b.net_amount) || 0), 0);
 
-      // Sync BazaarPayments
       const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
       const bpAll = await bpRes.json();
       const existingBP = bpAll.find(
@@ -212,7 +222,6 @@ export default function BazaarBills() {
         });
       }
 
-      // Sync Padam Debit
       const padamRes = await fetch(`${API_BASE_URL}/padam`);
       const padamAll = await padamRes.json();
       const existingDebit = padamAll.find(
@@ -272,10 +281,90 @@ export default function BazaarBills() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete record?")) return;
+
     try {
-      await fetch(`${API_BASE_URL}/bazaarbills/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE_URL}/bazaarbills`);
+      const all = await res.json();
+
+      const bill = all.find(b => (b._id === id || b.id === id));
+      if (!bill) return;
+
+      const { trader_name, crop_type, date } = bill;
+
+      await fetch(`${API_BASE_URL}/bazaarbills/${id}`, {
+        method: "DELETE"
+      });
+
+      const remainingBills = all.filter(b => b._id !== id && b.id !== id);
+      
+      const dayTotal = remainingBills
+        .filter(b =>
+          b.trader_name === trader_name &&
+          b.crop_type === crop_type &&
+          b.date === date
+        )
+        .reduce((s, b) => s + (Number(b.sub_total || b.net_amount || b.total_amount || 0)), 0);
+
+      const padamRes = await fetch(`${API_BASE_URL}/padam`);
+      const padamAll = await padamRes.json();
+
+      const debit = padamAll.find(p =>
+        p.type === "debit" &&
+        p.party_name === trader_name &&
+        p.crop_type === crop_type &&
+        p.date === date
+      );
+
+      if (debit) {
+        if (dayTotal > 0) {
+          await fetch(`${API_BASE_URL}/padam/${debit._id || debit.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...debit,
+              amount: dayTotal,
+              net_amount: dayTotal
+            })
+          });
+        } else {
+          await fetch(`${API_BASE_URL}/padam/${debit._id || debit.id}`, {
+            method: "DELETE"
+          });
+        }
+      }
+
+      const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
+      const bpAll = await bpRes.json();
+
+      const payment = bpAll.find(p =>
+        p.trader_name === trader_name &&
+        p.crop_type === crop_type &&
+        p.crop_date === date
+      );
+
+      if (payment) {
+        if (dayTotal > 0) {
+          if (!payment.is_credited) {
+            await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id || payment.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...payment,
+                amount: dayTotal
+              })
+            });
+          }
+        } else {
+          await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id || payment.id}`, {
+            method: "DELETE"
+          });
+        }
+      }
+
       load();
-    } catch (err) { console.error("Delete failed", err); }
+    } catch (err) {
+      console.error("Delete sync failed", err);
+    }
   };
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
@@ -358,21 +447,44 @@ export default function BazaarBills() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-muted/50 border-b border-border uppercase text-xs font-semibold text-muted-foreground">
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-left whitespace-nowrap">Book - Bill.No</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right whitespace-nowrap">Amount (₹)</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Quintals</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Kgs</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Bags</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Bag Type</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Crop</th>
-                          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center whitespace-nowrap">Price/Unit</th>
+                          <th className="px-4 py-2.5 text-left whitespace-nowrap">Book - Bill.No</th>
+                          <th className="px-4 py-2.5 text-right whitespace-nowrap">Amount (₹)</th>
+                          <th className="px-4 py-2.5 text-center whitespace-nowrap">Quintals</th>
+                          <th className="px-4 py-2.5 text-center whitespace-nowrap">Kgs</th>
+                          <th className="px-4 py-2.5 text-center whitespace-nowrap">Bags</th>
+                          <th className="px-4 py-2.5 text-center whitespace-nowrap">Bag Type</th>
+                          <th className="px-4 py-2.5 text-center whitespace-nowrap">Crop</th>
+                          <th className="px-4 py-2.5 text-center whitespace-nowrap">Price/Unit</th>
                           <th className="px-4 py-3 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {bills.map((bill, bIdx) => {
-                          const cropEntries = Object.entries(bill.crops);
-                          let billTotal = 0;
+                          // Group entries by crop
+                          const cropsMap = new Map();
+                          bill.entries.forEach(entry => {
+                            const cropName = entry.crop_type || "Unknown";
+                            if (!cropsMap.has(cropName)) {
+                              cropsMap.set(cropName, []);
+                            }
+                            cropsMap.get(cropName).push(entry);
+                          });
+                          
+                          // Calculate totals before rendering
+                          let billGrandTotal = 0;
+                          const cropGroupsArray = [];
+                          
+                          for (const [cropName, cropEntries] of cropsMap.entries()) {
+                            let cropTotal = 0;
+                            let cropBags = 0;
+                            for (const entry of cropEntries) {
+                              cropTotal += Number(entry.sub_total) || Number(entry.net_amount) || 0;
+                              cropBags += Number(entry.bags) || 0;
+                            }
+                            billGrandTotal += cropTotal;
+                            cropGroupsArray.push({ cropName, cropEntries, cropTotal, cropBags });
+                          }
+                          
                           return (
                             <React.Fragment key={bIdx}>
                               <tr className="bg-primary/5 border-y border-border">
@@ -380,46 +492,42 @@ export default function BazaarBills() {
                                   <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {bill.trader_name}
                                 </td>
                               </tr>
-                              {cropEntries.map(([cropName, rows]) => {
-                                const cropSubtotal = rows.reduce((s, r) => s + (Number(r.sub_total) || Number(r.net_amount) || 0), 0);
-                                const totalBags = rows.reduce((s, r) => s + (Number(r.bags) || 0), 0);
-                                billTotal += cropSubtotal;
-                                return (
-                                  <React.Fragment key={cropName}>
-                                    {rows.map((row) => (
-                                      <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer">
-                                        <td className="px-4 py-2.5 whitespace-nowrap"></td>
-                                        <td className="px-4 py-2.5 text-right font-mono font-bold text-primary whitespace-nowrap">₹{formatMoney(row.sub_total || row.net_amount || 0)}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.quintals ?? "—"}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.kgs ?? "—"}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.bags ?? "—"}</td>
-                                        <td className="px-4 py-2.5 text-center whitespace-nowrap">{row.bag_type || "—"}</td>
-                                        <td className="px-4 py-2.5 text-center font-medium whitespace-nowrap">{row.crop_type}</td>
-                                        <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">₹{formatExact(row.price_per_unit)}</td>
-                                        <td className="px-4 py-2.5 text-center whitespace-nowrap">
-                                          <button onClick={e => { e.stopPropagation(); handleDelete(row._id || row.id); }} className="text-destructive">
-                                            <Trash2 className="w-4 h-4" />
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                    <tr className="bg-blue-50/40 text-[10px] font-bold text-blue-700 uppercase">
-                                      <td className="px-4 py-1.5 whitespace-nowrap"></td>
-                                      <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropSubtotal)}</td>
-                                      <td colSpan={2} className="px-4 py-2.5 text-left pl-6 font-mono text-sm tracking-wide whitespace-nowrap">CROP TOTAL</td>
-                                      <td className="px-4 py-1.5 text-center font-mono text-sm whitespace-nowrap">{totalBags}</td>
-                                      <td colSpan={4} className="px-4 py-1.5 font-mono text-sm text-left pl-4 whitespace-nowrap">TOTAL BAGS</td>
+                              {cropGroupsArray.map(({ cropName, cropEntries, cropTotal, cropBags }) => (
+                                <React.Fragment key={cropName}>
+                                  {cropEntries.map((row, idx) => (
+                                    <tr key={row._id || row.id || idx} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer">
+                                      <td className="px-4 py-2.5 whitespace-nowrap"></td>
+                                      <td className="px-4 py-2.5 text-right font-mono font-bold text-primary whitespace-nowrap">₹{formatMoney(row.sub_total || row.net_amount || 0)}</td>
+                                      <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.quintals ?? "—"}</td>
+                                      <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.kgs ?? "—"}</td>
+                                      <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">{row.bags ?? "—"}</td>
+                                      <td className="px-4 py-2.5 text-center whitespace-nowrap">{row.bag_type || "—"}</td>
+                                      <td className="px-4 py-2.5 text-center font-medium whitespace-nowrap">{row.crop_type}</td>
+                                      <td className="px-4 py-2.5 text-center font-mono whitespace-nowrap">₹{formatExact(row.price_per_unit)}</td>
+                                      <td className="px-4 py-2.5 text-center whitespace-nowrap">
+                                        <button onClick={e => { e.stopPropagation(); handleDelete(row._id || row.id); }} className="text-destructive">
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </td>
                                     </tr>
-                                  </React.Fragment>
-                                );
-                              })}
-                              {cropEntries.length > 1 && (
+                                  ))}
+                                  <tr className="bg-blue-50/40 text-[10px] font-bold text-blue-700 uppercase">
+                                    <td className="px-4 py-1.5 whitespace-nowrap"></td>
+                                    <td className="px-4 py-1.5 text-right font-mono text-sm whitespace-nowrap">₹{formatMoney(cropTotal)}</td>
+                                    <td colSpan={2} className="px-4 py-2.5 text-center font-mono text-sm tracking-wide whitespace-nowrap">TOTAL AMOUNT</td>
+                                    <td className="px-4 py-1.5 text-center font-mono text-sm whitespace-nowrap">{cropBags}</td>
+                                    <td colSpan={4} className="px-4 py-1.5 font-mono text-sm text-left pl-4 whitespace-nowrap">TOTAL BAGS</td>
+                                  </tr>
+                                </React.Fragment>
+                              ))}
+                              {cropGroupsArray.length > 1 && (
                                 <tr className="bg-muted/30 border-b-2 border-primary/20 font-bold">
                                   <td className="px-4 py-2 whitespace-nowrap"></td>
-                                  <td className="px-4 py-2 text-right font-mono text-primary text-base whitespace-nowrap">₹{formatMoney(billTotal)}</td>
+                                  <td className="px-4 py-2 text-right font-mono text-primary text-base whitespace-nowrap">₹{formatMoney(billGrandTotal)}</td>
                                   <td colSpan={7} className="px-4 py-2 text-left pl-6 text-primary tracking-tighter text-xs whitespace-nowrap">GRAND BILL TOTAL</td>
                                 </tr>
                               )}
+                              {bIdx < bills.length - 1 && <tr><td colSpan={9} className="h-2"></td></tr>}
                             </React.Fragment>
                           );
                         })}

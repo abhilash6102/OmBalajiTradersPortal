@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const bazaarBillSchema = new mongoose.Schema(
   {
+    book_no: { type: Number, default: 1 },
     bill_no: { type: String, required: true },
     sl_no: { type: Number }, // Hooked up if Kanta syncs this
     date: { type: String, required: true },
@@ -13,7 +14,8 @@ const bazaarBillSchema = new mongoose.Schema(
     kgs: { type: Number },
     price_per_unit: { type: Number },
     net_amount: { type: Number },
-    total_amount: { type: Number }
+    total_amount: { type: Number },
+    kanta_entry_id: { type: String }
   },
   { timestamps: true }
 );
