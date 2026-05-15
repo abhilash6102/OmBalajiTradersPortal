@@ -642,7 +642,7 @@ const existingBillForSameCrop = bazaarAll.find(b =>
                         <td className="px-4 py-3 text-left whitespace-nowrap">{row.farmer_name}</td>
                         <td className="px-4 py-3 text-left text-muted-foreground whitespace-nowrap">{row.village}</td>
                         <td className="px-4 py-3 text-center font-mono whitespace-nowrap text-green-700 font-medium">₹{formatExact(row.price_per_unit)}</td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">{row.trader_name}</td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">{row.trader_name.toUpperCase()}</td>
                         <td className="px-4 py-3 text-center font-medium whitespace-nowrap text-accent-foreground">{row.bazaar != null ? row.bazaar : "—"}</td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>

@@ -63,16 +63,19 @@ const EMPTY_FORM = {
   quintals: "", leftover_kgs: ""
 };
 
+// 🔥 FIXED: Now gracefully chops off the ISO time string if the backend sends it
 function formatDate(dateStr) {
   if (!dateStr) return dateStr;
-  const [y, m, d] = dateStr.split("-");
+  const cleanDate = dateStr.split("T")[0]; 
+  const [y, m, d] = cleanDate.split("-");
   return `${d}/${m}/${y}`;
 }
 
 function groupByDate(entries) {
   const groups = {};
   entries.forEach(e => {
-    const key = e.date || "No Date";
+    // Also clean it here just in case the group key is acting weird
+    const key = e.date ? e.date.split("T")[0] : "No Date";
     if (!groups[key]) groups[key] = [];
     groups[key].push(e);
   });
@@ -107,33 +110,33 @@ export default function TakPatti() {
   
   useEffect(() => { load(); }, []);
 
-const getNextBookAndSlNo = () => {
-  if (!entries.length) return { book_no: 1, sl_no: 1 };
+  const getNextBookAndSlNo = () => {
+    if (!entries.length) return { book_no: 1, sl_no: 1 };
 
-  let maxBook = 1;
+    let maxBook = 1;
 
-  entries.forEach(item => {
-    const b = Number(item.book_no);
-    if (b > maxBook) maxBook = b;
-  });
+    entries.forEach(item => {
+      const b = Number(item.book_no);
+      if (b > maxBook) maxBook = b;
+    });
 
-  const currentBookItems = entries.filter(
-    item => Number(item.book_no) === maxBook
-  );
+    const currentBookItems = entries.filter(
+      item => Number(item.book_no) === maxBook
+    );
 
-  let maxSl = 0;
+    let maxSl = 0;
 
-  currentBookItems.forEach(item => {
-    const sl = Number(item.sl_no);
-    if (sl > maxSl) maxSl = sl;
-  });
+    currentBookItems.forEach(item => {
+      const sl = Number(item.sl_no);
+      if (sl > maxSl) maxSl = sl;
+    });
 
-  if (maxSl >= 100) {
-    return { book_no: maxBook + 1, sl_no: 1 };
-  }
+    if (maxSl >= 100) {
+      return { book_no: maxBook + 1, sl_no: 1 };
+    }
 
-  return { book_no: maxBook, sl_no: maxSl + 1 };
-};
+    return { book_no: maxBook, sl_no: maxSl + 1 };
+  };
 
   const handleAddNew = async () => {
     const { book_no, sl_no } = getNextBookAndSlNo();
@@ -173,7 +176,7 @@ const getNextBookAndSlNo = () => {
       let finalBookNo = parseInt(form.book_no, 10) || null;
 
       if (!finalSlNo && !editId) {
-        const next = await getNextBookAndSlNo();
+        const next = getNextBookAndSlNo();
         finalBookNo = next.book_no;
         finalSlNo = next.sl_no;
       } else if (!finalBookNo) {
@@ -351,8 +354,12 @@ const getNextBookAndSlNo = () => {
 
   const handleEdit = (row) => {
     const { quintals, leftoverKgs } = calcQuintalsKgs(row.crop_type, row.bags, row.kgs, row.bag_type);
+    
+    // 🔥 Ensure the edit form gets the clean date string too!
+    const cleanDate = row.date ? row.date.split("T")[0] : "";
+
     setForm({
-      book_no: row.book_no ?? 1, sl_no: row.sl_no ?? "", date: row.date ?? "", farmer_name: row.farmer_name ?? "",
+      book_no: row.book_no ?? 1, sl_no: row.sl_no ?? "", date: cleanDate, farmer_name: row.farmer_name ?? "",
       village: row.village ?? "", crop_type: row.crop_type ?? "", bags: row.bags != null ? row.bags : "",
       kgs: row.kgs != null ? row.kgs : "", bag_type: row.bag_type ?? "", price_per_unit: row.price_per_unit ?? "",
       sum_amount: row.sum_amount ?? "", commission: row.commission ?? "", hamali: row.hamali ?? "",
@@ -371,8 +378,10 @@ const getNextBookAndSlNo = () => {
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
   const filtered = entries.filter(e =>
-    (!dateFilter || e.date === dateFilter) && (!farmerFilter || e.farmer_name?.toLowerCase().includes(farmerFilter.toLowerCase())) &&
-    (!villageFilter || e.village?.toLowerCase().includes(villageFilter.toLowerCase())) && (!cropFilter || e.crop_type?.toLowerCase().includes(cropFilter.toLowerCase()))
+    (!dateFilter || (e.date && e.date.split("T")[0] === dateFilter)) && 
+    (!farmerFilter || e.farmer_name?.toLowerCase().includes(farmerFilter.toLowerCase())) &&
+    (!villageFilter || e.village?.toLowerCase().includes(villageFilter.toLowerCase())) && 
+    (!cropFilter || e.crop_type?.toLowerCase().includes(cropFilter.toLowerCase()))
   );
 
   const grouped = groupByDate(filtered).map(([dateKey, rows]) => [ dateKey, [...rows].sort((a, b) => (a.sl_no ?? 999) - (b.sl_no ?? 999)) ]);
@@ -477,10 +486,8 @@ const getNextBookAndSlNo = () => {
                             <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                               Book - Sl.No
                             </th>
-                            {["Date","Trader", "Farmer", "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
-                              // 🔥 Center these two
+                            {["Date","Trader","Farmer",  "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
                               const isCentered = h === "Crop" || h === "Sum (₹)";
-                              // 🔥 Keep the rest of the money on the right
                               const isMoney = ["Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)"].includes(h);
 
                               return (
@@ -501,7 +508,6 @@ const getNextBookAndSlNo = () => {
                             const deductions = roundToInt((row.commission || 0) + (row.hamali || 0) + (row.dharvay || 0) + (row.chata || 0));
                             return (
                               <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors">
-                                {/* 🔥 Added whitespace-nowrap to all <td> below to prevent breaking into multiple lines */}
                                 <td className="px-3 py-3 text-muted-foreground font-semibold whitespace-nowrap"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{formatDate(row.date) || "—"}</td>
                                 <td className="px-3 py-3 text-center whitespace-nowrap font-medium text-muted-foreground">{(row.trader_name || "").toUpperCase()}</td>
