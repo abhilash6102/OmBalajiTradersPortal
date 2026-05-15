@@ -357,7 +357,7 @@ const getNextSlNo = (type) => {
                           {dailyDebitEntries.map(row => (
                             <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b hover:bg-muted/20 cursor-pointer">
                               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap"><span className="text-red-700 font-medium">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
-                              <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{row.party_name}</td>
+                              <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{row.party_name.toUpperCase()}</td>
                               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{row.crop_type || "—"}</td>
                               <td className="px-4 py-3 text-right font-mono font-semibold text-red-700 whitespace-nowrap">₹{formatMoney(row.net_amount || row.amount)}</td>
                               <td className="px-4 py-3 text-right whitespace-nowrap">

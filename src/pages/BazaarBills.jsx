@@ -489,7 +489,7 @@ const traderDayBills = freshBazaar.filter(
                             <React.Fragment key={bIdx}>
                               <tr className="bg-primary/5 border-y border-border">
                                 <td colSpan={9} className="px-4 py-2 text-sm font-medium whitespace-nowrap">
-                                  <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {bill.trader_name}
+                                  <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {bill.trader_name.toUpperCase()}
                                 </td>
                               </tr>
                               {cropGroupsArray.map(({ cropName, cropEntries, cropTotal, cropBags }) => (

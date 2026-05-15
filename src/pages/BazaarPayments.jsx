@@ -284,7 +284,7 @@ const handleAddNew = () => {
                            return (
                             <tr key={payment._id || payment.id} onClick={() => handleEdit(payment)} className={`border-b border-border hover:bg-muted/20 cursor-pointer transition-colors ${overdue ? "bg-red-50/40" : ""}`}>
                               <td className="px-4 py-4 text-muted-foreground font-medium whitespace-nowrap"><span className="text-primary">{payment.book_no || 1}</span> - {payment.sl_no ?? "—"}</td>
-                              <td className="px-4 py-4 font-medium whitespace-nowrap">{payment.trader_name}</td>
+                              <td className="px-4 py-4 font-medium whitespace-nowrap">{payment.trader_name.toUpperCase()}</td>
                               <td className="px-4 py-4 whitespace-nowrap">{payment.crop_type}</td>
                               <td className={`px-4 py-4 font-mono whitespace-nowrap ${overdue ? "text-destructive font-bold" : "text-muted-foreground"}`}>{formatDate(payment.expected_payment_date)}</td>
                               <td className="px-4 py-4 font-mono font-bold text-primary text-right whitespace-nowrap">₹{format2(payment.amount)}</td>
