@@ -477,7 +477,7 @@ const getNextBookAndSlNo = () => {
                             <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                               Book - Sl.No
                             </th>
-                            {["Date", "Farmer", "Trader", "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
+                            {["Date","Trader", "Farmer", "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
                               // 🔥 Center these two
                               const isCentered = h === "Crop" || h === "Sum (₹)";
                               // 🔥 Keep the rest of the money on the right
@@ -504,8 +504,8 @@ const getNextBookAndSlNo = () => {
                                 {/* 🔥 Added whitespace-nowrap to all <td> below to prevent breaking into multiple lines */}
                                 <td className="px-3 py-3 text-muted-foreground font-semibold whitespace-nowrap"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{formatDate(row.date) || "—"}</td>
-                                <td className="px-3 py-3 font-medium whitespace-nowrap">{row.farmer_name}</td>
                                 <td className="px-3 py-3 text-center whitespace-nowrap font-medium text-muted-foreground">{(row.trader_name || "").toUpperCase()}</td>
+                                <td className="px-3 py-3 font-medium whitespace-nowrap">{row.farmer_name}</td>
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{row.village}</td>
                                 <td className="px-3 py-3 text-center whitespace-nowrap">{row.crop_type || "—"}</td>
                                 <td className="px-3 py-3 text-center whitespace-nowrap">{row.bag_type || "—"}</td>

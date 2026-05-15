@@ -6,58 +6,45 @@ const kantaSchema = new mongoose.Schema(
       type: Number,
       default: 1
     },
-
     sl_no: {
       type: Number
     },
-
     date: {
       type: String,
       required: true
     },
-
     farmer_name: {
       type: String,
       required: true
     },
-
     village: {
       type: String,
       required: true
     },
-
     crop_type: {
       type: String,
       required: true
     },
-
     bags: {
       type: Number
     },
-
     kgs: {
       type: Number
     },
-
     bag_type: {
       type: String
     },
-
     price_per_unit: {
       type: Number,
       required: true
     },
-
     trader_name: {
       type: String,
       required: true
     },
-
     bazaar: {
       type: Number
     },
-
-    // 🔥 OPTIONAL BUT VERY USEFUL FOR FUTURE SYNC
     kanta_uid: {
       type: String,
       unique: true,
@@ -69,6 +56,9 @@ const kantaSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+// ✅ ADD THIS HERE
+kantaSchema.index({ book_no: 1, sl_no: 1 }, { unique: true });
 
 const Kanta = mongoose.model("Kanta", kantaSchema);
 
