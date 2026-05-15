@@ -40,10 +40,11 @@ export default function Dashboard() {
       const today = new Date().toISOString().split("T")[0];
 
       try {
-        const [kantaRes, takPattiRes, bazaarBillsRes] = await Promise.all([
+        const [kantaRes, takPattiRes, bazaarBillsRes, padamRes] = await Promise.all([
           fetch(`${API_BASE_URL}/kanta`).then(r => r.json()).catch(() => []),
           fetch(`${API_BASE_URL}/takpatti`).then(r => r.json()).catch(() => []),
-          fetch(`${API_BASE_URL}/bazaarbills`).then(r => r.json()).catch(() => [])
+          fetch(`${API_BASE_URL}/bazaarbills`).then(r => r.json()).catch(() => []),
+          fetch(`${API_BASE_URL}/padam`).then(r => r.json()).catch(() => [])
         ]);
 
         // Calculate unique counts
@@ -58,8 +59,21 @@ export default function Dashboard() {
         // 🔥 OVERALL PROFIT: Sum of all commissions across ALL days
         const overallProfit = takPattiRes.reduce((sum, t) => sum + (Number(t.commission) || 0), 0);
 
-        // 🔥 OVERALL INCOME: Sum of all sub_totals in Bazaar Bills across ALL days
-        const overallIncome = bazaarBillsRes.reduce((sum, b) => sum + (Number(b.sub_total || b.net_amount || b.total_amount) || 0), 0);
+        // 🔥 OVERALL INCOME: Calculated on the GRAND TOTAL of the Padam
+        const globalCreditEntries = Array.isArray(padamRes) ? padamRes.filter(e => e.type === "credit") : [];
+        const globalDebitEntries = Array.isArray(padamRes) ? padamRes.filter(e => e.type === "debit") : [];
+
+        const totalCreditNet = globalCreditEntries.reduce((s, e) => s + (Number(e.net_amount) || 0), 0);
+        const totalCreditComm = globalCreditEntries.reduce((s, e) => s + (Number(e.commission) || 0), 0);
+        const totalCreditHamali = globalCreditEntries.reduce((s, e) => s + (Number(e.hamali) || 0), 0);
+        const totalCreditDharvay = globalCreditEntries.reduce((s, e) => s + (Number(e.dharvay) || 0), 0);
+        const totalCreditChata = globalCreditEntries.reduce((s, e) => s + (Number(e.chata) || 0), 0);
+
+        const totalCreditGross = totalCreditNet + totalCreditComm + totalCreditHamali + totalCreditDharvay + totalCreditChata;
+        const totalDebitNet = globalDebitEntries.reduce((s, e) => s + (Number(e.net_amount) || Number(e.amount) || 0), 0);
+
+        // The Grand Total of Padam is the matched/max balance of both sides
+        const overallIncome = Math.max(totalCreditGross, totalDebitNet);
 
         setStats({
           farmers: uniqueFarmers,
