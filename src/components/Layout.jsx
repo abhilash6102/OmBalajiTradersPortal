@@ -14,9 +14,6 @@ const navItems = [
   { path: "/padam", label: "Padam", icon: CreditCard },
   { path: "/bazaar-payments", label: "Bazaar Payments", icon: Wallet },
   { path: "/katha-book", label: "Katha Book", icon: BookOpen },
-  { path: "/jama-karchu", label: "Jama–Karchu", icon: BarChart3 },
-  { divider: true },
-  { path: "/farmers", label: "Farmers", icon: Users },
   { path: "/traders", label: "Traders", icon: Store },
 ];
 

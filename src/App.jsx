@@ -14,8 +14,6 @@ import BazaarBills from './pages/BazaarBills';
 import Padam from './pages/Padam';
 import BazaarPayments from './pages/BazaarPayments';
 import KathaBook from './pages/KathaBook';
-import JamaKarchu from './pages/JamaKarchu';
-import Farmers from './pages/Farmers';
 import Traders from './pages/Traders';
 
 const AuthenticatedApp = () => {
@@ -52,8 +50,6 @@ const AuthenticatedApp = () => {
         <Route path="/padam" element={<Padam />} />
         <Route path="/bazaar-payments" element={<BazaarPayments />} />
         <Route path="/katha-book" element={<KathaBook />} />
-        <Route path="/jama-karchu" element={<JamaKarchu />} />
-        <Route path="/farmers" element={<Farmers />} />
         <Route path="/traders" element={<Traders />} />
         <Route path="*" element={<PageNotFound />} />
       </Route>

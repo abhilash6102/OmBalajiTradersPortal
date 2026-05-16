@@ -2,7 +2,7 @@ import { API_BASE_URL } from "../api/config";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { 
-  Book, FileText, Receipt, CreditCard, Wallet, BookOpen, BarChart3,
+  Book, FileText, Receipt, CreditCard, Wallet, BookOpen,
   ArrowUpRight, TrendingUp, Users, Store, Wheat, IndianRupee, Banknote 
 } from "lucide-react";
 import StatCard from "../components/StatCard";
@@ -15,7 +15,7 @@ const modules = [
   { path: "/padam", label: "Padam", desc: "Credit–Debit ledger book", icon: CreditCard, color: "bg-purple-500" },
   { path: "/bazaar-payments", label: "Bazaar Payments", desc: "Trader payment tracking", icon: Wallet, color: "bg-rose-500" },
   { path: "/katha-book", label: "Katha Book", desc: "Trader account ledger", icon: BookOpen, color: "bg-teal-500" },
-  { path: "/jama-karchu", label: "Jama–Karchu", desc: "Final financial statement", icon: BarChart3, color: "bg-indigo-500" },
+  { path: "/traders", label: "Traders", desc: "Manage trader information", icon: Store, color: "bg-cyan-500" }
 ];
 
 // 🔥 STRICT 2-DECIMAL HELPER (Rounded exactly like your ledgers)
@@ -27,7 +27,7 @@ const formatMoney = (num) => {
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ 
-    farmers: 0, 
+    farmers: 0,
     traders: 0, 
     kantaEntries: 0, 
     todayVolume: 0,
@@ -40,26 +40,29 @@ export default function Dashboard() {
       const today = new Date().toISOString().split("T")[0];
 
       try {
-        const [kantaRes, takPattiRes, bazaarBillsRes, padamRes] = await Promise.all([
+        const [kantaRes, takPattiRes, bazaarBillsRes, padamRes, tradersRes] = await Promise.all([
           fetch(`${API_BASE_URL}/kanta`).then(r => r.json()).catch(() => []),
           fetch(`${API_BASE_URL}/takpatti`).then(r => r.json()).catch(() => []),
           fetch(`${API_BASE_URL}/bazaarbills`).then(r => r.json()).catch(() => []),
-          fetch(`${API_BASE_URL}/padam`).then(r => r.json()).catch(() => [])
+          fetch(`${API_BASE_URL}/padam`).then(r => r.json()).catch(() => []),
+          fetch(`${API_BASE_URL}/traders`).then(r => r.json()).catch(() => []),
         ]);
 
-        // Calculate unique counts
+        // 🔥 Calculate unique Farmers from TakPatti
         const uniqueFarmers = new Set(takPattiRes.map(t => t.farmer_name).filter(Boolean)).size;
-        const uniqueTraders = new Set(bazaarBillsRes.map(b => b.trader_name).filter(Boolean)).size;
+
+        // 🔥 Get exact Traders count from your new Traders module
+        const totalTraders = Array.isArray(tradersRes) ? tradersRes.length : 0;
         
         // Calculate Today's Volume (Total sum_amount from today's TakPatti)
         const todayVolume = takPattiRes
           .filter(t => t.date === today)
           .reduce((sum, t) => sum + (Number(t.sum_amount) || 0), 0);
 
-        // 🔥 OVERALL PROFIT: Sum of all commissions across ALL days
+        // OVERALL PROFIT: Sum of all commissions across ALL days
         const overallProfit = takPattiRes.reduce((sum, t) => sum + (Number(t.commission) || 0), 0);
 
-        // 🔥 OVERALL INCOME: Calculated on the GRAND TOTAL of the Padam
+        // OVERALL INCOME: Calculated on the GRAND TOTAL of the Padam
         const globalCreditEntries = Array.isArray(padamRes) ? padamRes.filter(e => e.type === "credit") : [];
         const globalDebitEntries = Array.isArray(padamRes) ? padamRes.filter(e => e.type === "debit") : [];
 
@@ -77,7 +80,7 @@ export default function Dashboard() {
 
         setStats({
           farmers: uniqueFarmers,
-          traders: uniqueTraders,
+          traders: totalTraders, 
           kantaEntries: Array.isArray(kantaRes) ? kantaRes.length : 0,
           todayVolume,
           overallProfit,
@@ -92,7 +95,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div>
+    <div className="pb-20">
       {/* Hero Section */}
       <div className="mb-8">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -154,7 +157,7 @@ export default function Dashboard() {
       </div>
 
       {/* Module Navigation Cards */}
-      <h2 className="text-lg font-semibold text-foreground mb-4">Modules</h2>
+      <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Modules</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {modules.map((mod, i) => {
           const Icon = mod.icon;

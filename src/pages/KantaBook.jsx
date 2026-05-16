@@ -489,7 +489,7 @@ const existingBillForSameCrop = bazaarAll.find(b =>
 
   return (
     <div className="pb-20">
-      <PageHeader title="Kanta Book" subtitle="Initial crop entry register">
+      <PageHeader title="Kanta Book" subtitle="Initial crop entry register — record all incoming agricultural produce ">
         <div className="flex gap-2">
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" /> 

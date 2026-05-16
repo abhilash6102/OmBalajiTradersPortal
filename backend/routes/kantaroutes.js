@@ -33,7 +33,6 @@ import Padam from "../models/padam.js";
 import BazaarPayment from "../models/bazaarpayments.js";
 import BazaarBill from "../models/bazaarbills.js";
 import Takpatti from "../models/takpatti.js";
-import Kanta from "../models/kantabook.js";
 
 router.delete("/:id", async (req, res) => {
   try {
