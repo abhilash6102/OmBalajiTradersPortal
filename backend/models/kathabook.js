@@ -22,14 +22,16 @@ const kathabookSchema = new mongoose.Schema(
       required: true,
     },
     bill_no: {
-      type: String,
-      default: "",
+      type: Number,
     },
     book_no: { type: Number },
     sl_no: { type: Number },
   },
   { timestamps: true }
 );
-
+kathabookSchema.index(
+  { book_no: 1, bill_no: 1, record_type: 1 },
+  { unique: true, sparse: true }
+);
 const KathaBook = mongoose.model("KathaBook", kathabookSchema);
 export default KathaBook;

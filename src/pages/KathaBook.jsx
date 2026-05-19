@@ -54,6 +54,16 @@ export default function KathaBook() {
     }
   };
 
+  useEffect(() => {
+  const initial = {};
+  entries.forEach(e => {
+    if (e.trader_name) {
+      initial[e.trader_name] = true;
+    }
+  });
+  setCollapsedTraders(initial);
+}, [entries]);
+
   useEffect(() => { load(); }, []);
 
   const setField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));

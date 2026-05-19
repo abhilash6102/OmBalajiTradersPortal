@@ -113,46 +113,39 @@ export default function BazaarPayments() {
   };
 
   // 🔥 WORKFLOW AUTO: BazaarPayments MARK -> KathaBook CREDIT
-  const handleConfirmSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const updatedPayment = { ...confirmModal, ...confirmForm, is_credited: true };
-      
-      await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedPayment),
-      });
+const handleConfirmSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    // 1. Mark as credited
+    const updatedPayment = { ...confirmModal, ...confirmForm, is_credited: true };
+    await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedPayment),
+    });
 
-      // SYNC TO KATHA BOOK
-      const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
-      const kathaAll = await kathaRes.json();
-      
-      const existingCredit = kathaAll.find(k => 
-        k.record_type === "credit" && k.book_no === confirmModal.book_no && 
-        k.sl_no === confirmModal.sl_no && k.trader_name?.toLowerCase() === confirmModal.trader_name?.toLowerCase()
-      );
+    // 2. Sync to Katha Book (Credit)
+const kData = {
+  record_type: "credit",
+  trader_name: confirmModal.trader_name,
+  date: confirmForm.credited_date,
+  amount: confirmModal.amount,
+  book_no: confirmModal.book_no, // Ensure these are passed
+  sl_no: confirmModal.sl_no,
+  bill_no: `${confirmModal.book_no}-${confirmModal.sl_no}`,
+  is_auto_generated: true
+};
 
-      const kData = {
-        record_type: "credit",
-        trader_name: confirmModal.trader_name,
-        date: confirmForm.credited_date, // Credited Date
-        amount: confirmModal.amount,
-        bill_no: `${confirmModal.book_no}-${confirmModal.sl_no}`,
-        book_no: confirmModal.book_no,
-        sl_no: confirmModal.sl_no
-      };
+await fetch(`${API_BASE_URL}/kathabook`, { 
+  method: "POST", 
+  headers: { "Content-Type": "application/json" }, 
+  body: JSON.stringify(kData) 
+});
 
-      if (existingCredit) {
-        await fetch(`${API_BASE_URL}/kathabook/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kData) });
-      } else {
-        await fetch(`${API_BASE_URL}/kathabook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kData) });
-      }
-
-      setConfirmModal(null);
-      load();
-    } catch (err) { console.error("Confirm error:", err); }
-    setLoading(false);
-  };
+    setConfirmModal(null);
+    load();
+  } catch (err) { console.error(err); }
+  setLoading(false);
+};
 
   const handleUnmark = async (payment) => {
     if (!window.confirm("Unmark this payment as credited? This will remove the credit from the Katha Book.")) return;
