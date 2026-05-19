@@ -186,7 +186,7 @@ const getNextSlNo = (type) => {
       <PageHeader title="Padam Ledger" subtitle="Credit–Debit Day Book — track daily financial balance between farmers and traders">
         {!showForm && <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button>}
       </PageHeader>
-
+      <div className="mt- -m-6" />
       {!showForm && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../api/config";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X, Save, Search } from "lucide-react";
+import { Plus, Trash2, X, Save, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,18 @@ const EMPTY_FORM = {
 
 export default function Traders() {
   const [entries, setEntries] = useState([]);
-  const [searchFilter, setSearchFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // 🔍 Separate filters
+  const [refFilter, setRefFilter] = useState("");
+  const [codeFilter, setCodeFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+
+  // ✅ NEW COLLAPSE STATE
+  const [collapsed, setCollapsed] = useState(false);
 
   const load = async () => {
     try {
@@ -30,10 +37,12 @@ export default function Traders() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const getNextRefNo = () => {
-    if (entries.length === 0) return 50;
+    if (entries.length === 0) return 1;
     return Math.max(...entries.map(e => e.ref_no || 0)) + 1;
   };
 
@@ -65,13 +74,11 @@ export default function Traders() {
         }
       );
 
-      const data = await res.json();
-
-if (!res.ok) {
-  const text = await res.text();
-  console.error("API Error:", text);
-  throw new Error("API failed");
-}
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Backend Error:", text);
+        return;
+      }
 
       setShowForm(false);
       setForm(EMPTY_FORM);
@@ -88,7 +95,6 @@ if (!res.ok) {
     setForm(row);
     setEditId(row._id);
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id) => {
@@ -97,15 +103,22 @@ if (!res.ok) {
     load();
   };
 
+  // 🔍 FILTER LOGIC
   const filtered = entries.filter(e =>
-    !searchFilter ||
-    [e.name, e.short_form, String(e.ref_no)]
-      .some(v => v?.toLowerCase().includes(searchFilter.toLowerCase()))
+    String(e.ref_no).includes(refFilter) &&
+    (e.short_form || "").toLowerCase().includes(codeFilter.toLowerCase()) &&
+    (e.name || "").toLowerCase().includes(nameFilter.toLowerCase())
   );
+
+  const traderCount = filtered.length;
 
   return (
     <div className="pb-20">
-      <PageHeader title="Traders" subtitle="Manage trader codes and reference numbers">
+
+      <PageHeader
+        title="Traders"
+        subtitle="Manage trader codes and reference numbers"
+      >
         {!showForm && (
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" />
@@ -116,47 +129,62 @@ if (!res.ok) {
 
       {/* 🔥 FORM */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5 mb-6 shadow-sm">
-          
+        <form
+          className="bg-card border rounded-xl p-5 mb-6 shadow-sm"
+          onSubmit={handleSubmit}
+        >
           <div className="flex justify-between mb-4">
             <h3 className="font-semibold text-sm">
               {editId ? "Edit Trader" : "New Trader"}
             </h3>
-            <X className="w-4 h-4 cursor-pointer" onClick={() => setShowForm(false)} />
+
+            <X
+              className="w-4 h-4 cursor-pointer"
+              onClick={() => setShowForm(false)}
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+          <div className="flex flexStart">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 w-full max-w-2xl">
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Ref No *</Label>
-              <Input
-                type="number"
-                value={form.ref_no}
-                onChange={(e) => setField("ref_no", e.target.value)}
-                required
-              />
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Ref No <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  value={form.ref_no}
+                  onChange={(e) => setField("ref_no", e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Code <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={form.short_form}
+                  onChange={(e) => setField("short_form", e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Trader Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+              </div>
+
             </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Code *</Label>
-              <Input
-                value={form.short_form}
-                onChange={(e) => setField("short_form", e.target.value)}
-                placeholder="SBOM"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Trader Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-                placeholder="Sri Balaji Oil Mill"
-                required
-              />
-            </div>
-
           </div>
 
           <div className="flex gap-2">
@@ -165,46 +193,83 @@ if (!res.ok) {
               {loading ? "Saving..." : "Save Trader"}
             </Button>
 
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowForm(false)}
+            >
               Cancel
             </Button>
           </div>
         </form>
       )}
 
-      {/* 🔍 SEARCH */}
+
+
+      {/* 🔍 SEPARATE FILTERS */}
       {!showForm && (
-        <div className="mb-4 flex gap-2">
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+        <div className="flex gap-2 mb-4 flex-wrap">
+
+          <div className="w-[120px]">
             <Input
-              placeholder="Search traders..."
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              className="pl-9"
+              placeholder="Ref No"
+              value={refFilter}
+              onChange={(e) => setRefFilter(e.target.value)}
+              className="h-9 text-sm"
             />
           </div>
+
+          <div className="w-[150px]">
+            <Input
+              placeholder="Code"
+              value={codeFilter}
+              onChange={(e) => setCodeFilter(e.target.value)}
+              className="h-9 text-sm"
+            />
+          </div>
+
+          <div className="w-[200px]">
+            <Input
+              placeholder="Trader Name"
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+              className="h-9 text-sm"
+            />
+          </div>
+
         </div>
       )}
 
-      {/* EMPTY */}
-      {!showForm && filtered.length === 0 && (
-        <div className="bg-card border rounded-xl py-14 text-center text-muted-foreground">
-          No traders found
-        </div>
+      {/* 🔥 COLLAPSIBLE HEADER (NEW ADDITION ONLY) */}
+      {!showForm && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(prev => !prev)}
+          className="flex items-center gap-x-0 mb-3 w-full text-left font-semibold text-primary"
+        >
+          {collapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <ChevronDown className="w-4 h-4" />
+          )}
+          <span className="ml-2 text-sm bg-muted px-2 py-0.5 rounded">
+            {traderCount} Traders
+          </span>
+        </button>
       )}
 
-      {/* 🔥 TABLE */}
-      {!showForm && filtered.length > 0 && (
+      {/* TABLE (NOW COLLAPSIBLE) */}
+      {!showForm && !collapsed && filtered.length > 0 && (
         <div className="bg-card rounded-xl border overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+
               <thead>
                 <tr className="bg-muted/50 border-b">
-                  <th className="px-4 py-3 text-left text-xs">Ref No</th>
-                  <th className="px-4 py-3 text-left text-xs">Code</th>
-                  <th className="px-4 py-3 text-left text-xs">Trader Name</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Ref No</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Code</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Trader Name</th>
+                  <th></th>
                 </tr>
               </thead>
 
@@ -213,21 +278,21 @@ if (!res.ok) {
                   <tr
                     key={row._id}
                     onClick={() => handleEdit(row)}
-                    className="hover:bg-muted/40 cursor-pointer"
+                    className="hover:bg-muted/40 cursor-pointer border-b border-border"
                   >
-                    <td className="px-4 py-3 font-bold text-primary">
+                    <td className="px-4 py-2 font-bold text-primary">
                       {row.ref_no}
                     </td>
 
-                    <td className="px-4 py-3 font-semibold text-muted-foreground">
-                      {row.short_form.toUpperCase()}
+                    <td className="px-4 py-2 font-semibold text-muted-foreground">
+                      {row.short_form?.toUpperCase()}
                     </td>
 
-                    <td className="px-4 py-3">
-                      {row.name}
+                    <td className="px-4 py-2">
+                      {row.name.toUpperCase()}
                     </td>
 
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-2 text-right">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -243,10 +308,12 @@ if (!res.ok) {
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         </div>
       )}
+
     </div>
   );
 }

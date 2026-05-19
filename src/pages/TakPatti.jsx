@@ -396,7 +396,7 @@ export default function TakPatti() {
   return (
     <div className="pb-20">
       <PageHeader title="Tak Patti" subtitle="Detailed farmer transaction sheet with deductions and net payable"><Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button></PageHeader>
-      
+      <div className="mt- -m-6" />
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5 mb-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">

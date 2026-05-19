@@ -107,7 +107,10 @@ const handleAddNew = () => {
   if (payments.length > 0) {
     nextBook = Math.max(...payments.map(p => Number(p.book_no || 1)));
 
-    const inMaxBook = payments.filter(p => Number(p.book_no || 1) === nextBook);
+    const inMaxBook = payments.filter(
+      p => Number(p.book_no || 1) === nextBook
+    );
+
     nextSl = Math.max(...inMaxBook.map(p => Number(p.sl_no || 0))) + 1;
 
     if (nextSl > 100) {
@@ -142,7 +145,13 @@ const handleAddNew = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = { ...form, amount: Number(form.amount) };
+      const payload = {
+        ...form,
+        amount: Math.round(Number(form.amount || 0)),
+        book_no: Number(form.book_no || 1),
+        sl_no: Number(form.sl_no || 1),
+        source: "bazaarpayments"
+      };
       const url = editId ? `${API_BASE_URL}/bazaarpayments/${editId}` : `${API_BASE_URL}/bazaarpayments`;
       const method = editId ? "PUT" : "POST";
       await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -203,7 +212,7 @@ const handleAddNew = () => {
       <PageHeader title="Bazaar Payments" subtitle="Track trader payments — confirm when amounts are credited to your bank account">
         {!showForm && <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Entry</Button>}
       </PageHeader>
-
+      <div className="mt- -m-6" />
       {!showForm && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <StatCard title="Total Pending" value={`₹${format2(filtered.filter(p=>!p.is_credited).reduce((s,p)=>s+p.amount,0))}`} icon={Clock} className="border-amber-200 bg-amber-50/30" />

@@ -57,9 +57,7 @@ const kantaSchema = new mongoose.Schema(
   }
 );
 
-// ✅ ADD THIS HERE
-
+kantaSchema.index({ book_no: 1, sl_no: 1 }, { unique: true });
 
 const Kanta = mongoose.model("Kanta", kantaSchema);
-
 export default Kanta;

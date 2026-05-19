@@ -9,7 +9,7 @@ import bazaarBillRoutes from "./routes/bazaarbillroutes.js";
 import bazaarPaymentRoutes from "./routes/bazaarpaymentsroutes.js";
 import padamRoutes from "./routes/padamroutes.js";
 import traderRoutes from "./routes/traderroutes.js";
-
+import kathaBookRoutes from "./routes/kathabookroutes.js";
 dotenv.config();
 
 const app = express();
@@ -28,6 +28,7 @@ app.use("/api/bazaarbills", bazaarBillRoutes);
 app.use("/api/bazaarpayments", bazaarPaymentRoutes);
 app.use("/api/padam", padamRoutes);
 app.use("/api/traders", traderRoutes);
+app.use("/api/kathabook", kathaBookRoutes);
 
 app.get("/", (req, res) => {
   res.send("Om Balaji API is running...");

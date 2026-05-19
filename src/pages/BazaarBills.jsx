@@ -383,7 +383,7 @@ const traderDayBills = freshBazaar.filter(
       <PageHeader title="Bazaar Bills" subtitle="Trader billing register — manage unified billing records & subtotals">
         {!showForm && <Button onClick={handleAddNew}><Plus className="w-4 h-4 mr-2" /> New Bill Record</Button>}
       </PageHeader>
-
+      <div className="mt- -m-6" />
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5 mb-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -437,7 +437,7 @@ const traderDayBills = freshBazaar.filter(
 
           {grouped.map(({ date, bills }) => (
             <div key={date} className="mb-6">
-              <button type="button" onClick={() => toggleDate(date)} className="flex items-center gap-2 mb-2 w-full text-left font-semibold text-primary">
+              <button type="button" onClick={() => toggleDate(date)} className="flex items-center gap-2 mb-2 w-full text-left font-semibold text-primary text-sm">
                 {collapsedDates[date] ? <ChevronRight className="w-4" /> : <ChevronDown className="w-4" />}
                 {formatDate(date)}
               </button>
