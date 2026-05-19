@@ -5,10 +5,11 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   try {
-    const entry = new KathaBook({ ...req.body, is_auto_generated: false });
+    const entry = new KathaBook(req.body);
     const saved = await entry.save();
     res.status(201).json(saved);
   } catch (error) {
+    console.error("KathaBook Save Error:", error);
     res.status(500).json({ message: error.message });
   }
 });

@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../api/config";
 import React, { useState, useEffect } from "react";
-import { CheckCircle2, Clock, CheckCheck, Trash2, Search, IndianRupee, AlertCircle, Wallet, ChevronDown, ChevronRight, Plus, Save, X } from "lucide-react";
+import { CheckCircle2, Clock, Trash2, Search, Wallet, ChevronDown, ChevronRight, Plus, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,51 +10,25 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 
-// 🔥 CROP OPTIONS
 const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia", "Cotton", "Castor Seeds"];
-
 const BANK_LABELS = { sbi: "SBI", icici: "ICICI", union: "Union Bank", canara: "Canara Bank", other: "Other" };
-const BANK_COLORS = {
-  sbi: "bg-blue-100 text-blue-700 border-blue-200",
-  icici: "bg-orange-100 text-orange-700 border-orange-200",
-  union: "bg-purple-100 text-purple-700 border-purple-200",
-  canara: "bg-green-100 text-green-700 border-green-200",
-  other: "bg-gray-100 text-gray-700 border-gray-200"
-};
+const BANK_COLORS = { sbi: "bg-blue-100 text-blue-700", icici: "bg-orange-100 text-orange-700", union: "bg-purple-100 text-purple-700", canara: "bg-green-100 text-green-700", other: "bg-gray-100 text-gray-700" };
 
 const format2 = (num) => Math.round(Number(num || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-function formatDate(d) {
-  if (!d) return "—";
-  const [y, m, day] = d.split("-");
-  return `${day}/${m}/${y}`;
-}
-
-function isOverdue(expectedDate) {
-  if (!expectedDate) return false;
-  return new Date(expectedDate) < new Date();
-}
+function formatDate(d) { if (!d) return "—"; const cleanDate = d.split("T")[0]; const [y, m, day] = cleanDate.split("-"); return `${day}/${m}/${y}`; }
+function isOverdue(expectedDate) { if (!expectedDate) return false; return new Date(expectedDate) < new Date(); }
 
 function groupByDate(entries) {
   const groups = {};
   entries.forEach(e => {
-    const d = e.crop_date || "No Date";
+    const d = e.crop_date ? e.crop_date.split("T")[0] : "No Date";
     if (!groups[d]) groups[d] = [];
     groups[d].push(e);
   });
-  return Object.entries(groups)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([dateKey, rows]) => [
-      dateKey,
-      [...rows].sort((a, b) => (a.book_no || 1) - (b.book_no || 1) || (a.sl_no || 0) - (b.sl_no || 0))
-    ]);
+  return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a)).map(([dateKey, rows]) => [dateKey, [...rows].sort((a, b) => (a.book_no || 1) - (b.book_no || 1) || (a.sl_no || 0) - (b.sl_no || 0))]);
 }
 
-const EMPTY_FORM = {
-  book_no: "", sl_no: "", trader_name: "", crop_type: "", 
-  crop_date: new Date().toISOString().split("T")[0], 
-  expected_payment_date: "", amount: ""
-};
+const EMPTY_FORM = { book_no: "", sl_no: "", trader_name: "", crop_type: "", crop_date: new Date().toISOString().split("T")[0], expected_payment_date: "", amount: "" };
 
 export default function BazaarPayments() {
   const [payments, setPayments] = useState([]);
@@ -62,12 +36,10 @@ export default function BazaarPayments() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
-
   const [searchTrader, setSearchTrader] = useState("");
-  const [searchAmount, setSearchAmount] = useState(""); // Added amount search
+  const [searchAmount, setSearchAmount] = useState(""); 
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  
   const [confirmModal, setConfirmModal] = useState(null);
   const [confirmForm, setConfirmForm] = useState({ bank: "", credited_date: "" });
   const [collapsedDates, setCollapsedDates] = useState({});
@@ -85,8 +57,6 @@ export default function BazaarPayments() {
   const setField = (key, value) => {
     setForm(prev => {
       const updated = { ...prev, [key]: value };
-      
-      // 🔥 AUTO-CALCULATE EXPECTED DATE
       if (key === "crop_date" || key === "crop_type") {
         const baseDate = new Date(updated.crop_date);
         if (!isNaN(baseDate.getTime())) {
@@ -99,43 +69,25 @@ export default function BazaarPayments() {
     });
   };
 
-  
-const handleAddNew = () => {
-  let nextBook = 1;
-  let nextSl = 1;
-
-  if (payments.length > 0) {
-    nextBook = Math.max(...payments.map(p => Number(p.book_no || 1)));
-
-    const inMaxBook = payments.filter(
-      p => Number(p.book_no || 1) === nextBook
-    );
-
-    nextSl = Math.max(...inMaxBook.map(p => Number(p.sl_no || 0))) + 1;
-
-    if (nextSl > 100) {
-      nextBook += 1;
-      nextSl = 1;
+  const handleAddNew = () => {
+    let nextBook = 1, nextSl = 1;
+    if (payments.length > 0) {
+      nextBook = Math.max(...payments.map(p => Number(p.book_no || 1)));
+      const inMaxBook = payments.filter(p => Number(p.book_no || 1) === nextBook);
+      nextSl = Math.max(...inMaxBook.map(p => Number(p.sl_no || 0))) + 1;
+      if (nextSl > 100) { nextBook += 1; nextSl = 1; }
     }
-  }
-
-  setForm({ ...EMPTY_FORM, book_no: nextBook, sl_no: nextSl });
-  setShowForm(true);
-};
+    setForm({ ...EMPTY_FORM, book_no: nextBook, sl_no: nextSl });
+    setShowForm(true);
+  };
 
   const handleEdit = (payment) => {
     setEditId(payment._id || payment.id);
+    const cleanDate = payment.credited_date ? payment.credited_date.split("T")[0] : "";
     setForm({
-      book_no: payment.book_no || "",
-      sl_no: payment.sl_no || "",
-      trader_name: payment.trader_name || "",
-      crop_type: payment.crop_type || "",
-      crop_date: payment.crop_date || "",
-      expected_payment_date: payment.expected_payment_date || "",
-      amount: payment.amount || "",
-      bank: payment.bank || "",
-      is_credited: payment.is_credited || false,
-      credited_date: payment.credited_date || ""
+      book_no: payment.book_no || "", sl_no: payment.sl_no || "", trader_name: payment.trader_name || "", crop_type: payment.crop_type || "",
+      crop_date: payment.crop_date ? payment.crop_date.split("T")[0] : "", expected_payment_date: payment.expected_payment_date ? payment.expected_payment_date.split("T")[0] : "",
+      amount: payment.amount || "", bank: payment.bank || "", is_credited: payment.is_credited || false, credited_date: cleanDate
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -145,16 +97,9 @@ const handleAddNew = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = {
-        ...form,
-        amount: Math.round(Number(form.amount || 0)),
-        book_no: Number(form.book_no || 1),
-        sl_no: Number(form.sl_no || 1),
-        source: "bazaarpayments"
-      };
+      const payload = { ...form, amount: Number(form.amount) };
       const url = editId ? `${API_BASE_URL}/bazaarpayments/${editId}` : `${API_BASE_URL}/bazaarpayments`;
-      const method = editId ? "PUT" : "POST";
-      await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      await fetch(url, { method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       setShowForm(false);
       load();
     } catch (err) { console.error(err); }
@@ -163,32 +108,69 @@ const handleAddNew = () => {
 
   const openConfirm = (payment) => {
     setConfirmModal(payment);
-    setConfirmForm({ bank: payment.bank || "", credited_date: payment.credited_date || new Date().toISOString().split("T")[0] });
+    const cDate = payment.credited_date ? payment.credited_date.split("T")[0] : new Date().toISOString().split("T")[0];
+    setConfirmForm({ bank: payment.bank || "", credited_date: cDate });
   };
 
+  // 🔥 WORKFLOW AUTO: BazaarPayments MARK -> KathaBook CREDIT
   const handleConfirmSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const updatedPayment = { ...confirmModal, ...confirmForm, is_credited: true };
+      
       await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...confirmForm, is_credited: true }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedPayment),
       });
+
+      // SYNC TO KATHA BOOK
+      const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
+      const kathaAll = await kathaRes.json();
+      
+      const existingCredit = kathaAll.find(k => 
+        k.record_type === "credit" && k.book_no === confirmModal.book_no && 
+        k.sl_no === confirmModal.sl_no && k.trader_name?.toLowerCase() === confirmModal.trader_name?.toLowerCase()
+      );
+
+      const kData = {
+        record_type: "credit",
+        trader_name: confirmModal.trader_name,
+        date: confirmForm.credited_date, // Credited Date
+        amount: confirmModal.amount,
+        bill_no: `${confirmModal.book_no}-${confirmModal.sl_no}`,
+        book_no: confirmModal.book_no,
+        sl_no: confirmModal.sl_no
+      };
+
+      if (existingCredit) {
+        await fetch(`${API_BASE_URL}/kathabook/${existingCredit._id || existingCredit.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kData) });
+      } else {
+        await fetch(`${API_BASE_URL}/kathabook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kData) });
+      }
+
       setConfirmModal(null);
       load();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Confirm error:", err); }
     setLoading(false);
   };
 
   const handleUnmark = async (payment) => {
-    if (!window.confirm("Unmark this payment as credited?")) return;
-    await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id || payment.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_credited: false, credited_date: null, bank: null }),
-    });
-    load();
+    if (!window.confirm("Unmark this payment as credited? This will remove the credit from the Katha Book.")) return;
+    try {
+      const updatedPayment = { ...payment, is_credited: false, credited_date: null, bank: null };
+      await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id || payment.id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedPayment),
+      });
+
+      const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
+      const kathaAll = await kathaRes.json();
+      const targetCredit = kathaAll.find(k => 
+        k.record_type === "credit" && k.book_no === payment.book_no && k.sl_no === payment.sl_no && k.trader_name?.toLowerCase() === payment.trader_name?.toLowerCase()
+      );
+      if (targetCredit) await fetch(`${API_BASE_URL}/kathabook/${targetCredit._id || targetCredit.id}`, { method: "DELETE" });
+
+      load();
+    } catch (err) { console.error("Unmark error:", err); }
   };
 
   const handleDelete = async (id) => {
@@ -200,7 +182,7 @@ const handleAddNew = () => {
   const filtered = payments.filter((p) => {
     const matchTrader = !searchTrader || p.trader_name?.toLowerCase().includes(searchTrader.toLowerCase());
     const matchAmount = !searchAmount || String(Math.round(p.amount || 0)).includes(searchAmount); 
-    const matchDate = !dateFilter || p.crop_date === dateFilter;
+    const matchDate = !dateFilter || (p.crop_date && p.crop_date.split("T")[0] === dateFilter);
     const matchStatus = statusFilter === "all" || (statusFilter === "credited" ? p.is_credited : !p.is_credited);
     return matchTrader && matchAmount && matchDate && matchStatus;
   });
