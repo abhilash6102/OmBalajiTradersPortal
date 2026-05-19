@@ -135,10 +135,17 @@ const kData = {
   is_auto_generated: true
 };
 
-await fetch(`${API_BASE_URL}/kathabook`, { 
-  method: "POST", 
-  headers: { "Content-Type": "application/json" }, 
-  body: JSON.stringify(kData) 
+await fetch(`${API_BASE_URL}/kathabook`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    record_type: "credit",
+    trader_name,
+    amount,
+    date,
+    book_no: payment.book_no,   // 🔥 ADD THIS
+    bill_no: payment.bill_no    // 🔥 KEEP THIS
+  })
 });
 
     setConfirmModal(null);

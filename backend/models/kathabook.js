@@ -29,9 +29,6 @@ const kathabookSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-kathabookSchema.index(
-  { book_no: 1, bill_no: 1, record_type: 1 },
-  { unique: true, sparse: true }
-);
+
 const KathaBook = mongoose.model("KathaBook", kathabookSchema);
 export default KathaBook;
