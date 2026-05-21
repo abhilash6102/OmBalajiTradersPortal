@@ -22,11 +22,15 @@ const kathabookSchema = new mongoose.Schema(
       required: true,
     },
     bill_no: {
-      type: Number,
+      type: String,
     },
     book_no: { type: Number },
     sl_no: { type: Number },
+    kanta_entry_id: { type: String },
+is_auto_generated: { type: Boolean, default: false },
+month: { type: String, index: true },
   },
+  
   { timestamps: true }
 );
 

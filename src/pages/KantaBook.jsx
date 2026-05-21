@@ -125,16 +125,23 @@ export default function KantaBook() {
       const bagWt = BAG_WEIGHTS[form.bag_type] || 0;
       const crop = form.crop_type || "";
 
-      let finalSlNo = parseInt(form.sl_no, 10) || null;
-      let finalBookNo = parseInt(form.book_no, 10) || null;
+let finalSlNo = parseInt(form.sl_no, 10) || null;
+let finalBookNo = parseInt(form.book_no, 10) || null;
 
-      if (!finalSlNo && !editId) {
-        const next = await getNextBookAndSlNo();
-        finalBookNo = next.book_no;
-        finalSlNo = next.sl_no;
-      } else if (!finalBookNo) {
-        finalBookNo = 1;
-      }
+// Auto‑generate only when BOTH are empty (and it's a new entry)
+if (!finalBookNo && !finalSlNo && !editId) {
+  const next = await getNextBookAndSlNo();
+  finalBookNo = next.book_no;
+  finalSlNo = next.sl_no;
+} else {
+  // If user typed a book number but left sl_no empty → default sl = 1
+  if (finalBookNo && !finalSlNo) finalSlNo = 1;
+  // If user typed an sl_no but left book_no empty → default book = 1
+  if (!finalBookNo && finalSlNo) finalBookNo = 1;
+}
+
+if (!finalBookNo) finalBookNo = 1;
+if (!finalSlNo) finalSlNo = 1;
 
       const kantaData = { 
         ...form, book_no: finalBookNo, sl_no: finalSlNo, bags, kgs, price_per_unit: price 
@@ -153,16 +160,20 @@ export default function KantaBook() {
 
       const quintals = Math.floor(totalKg / 100);
       const leftoverKgs = roundToInt(totalKg % 100);
+      
+// 1. Save Kanta Entry
+      let savedKantaId = editId; // 👈 1. ADD THIS LINE
 
-      // 1. Save Kanta Entry
       if (editId) {
         await fetch(`${API_BASE_URL}/kanta/${editId}`, {
           method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData)
         });
       } else {
-        await fetch(`${API_BASE_URL}/kanta`, {
+        const kRes = await fetch(`${API_BASE_URL}/kanta`, { // 👈 2. CAPTURE RESPONSE
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kantaData)
         });
+        const kSaved = await kRes.json();
+        savedKantaId = kSaved._id || kSaved.id; // 👈 3. DEFINE THE ID HERE
       }
 
       // 2. Save TakPatti
@@ -171,6 +182,7 @@ export default function KantaBook() {
       const matchingTP = takPattiAll.find(tp => Number(tp.sl_no) === Number(finalSlNo) && Number(tp.book_no || 1) === Number(finalBookNo));
       
       const tpData = {
+        kanta_entry_id: savedKantaId,
         book_no: finalBookNo, sl_no: finalSlNo, date: form.date, farmer_name: form.farmer_name, 
         village: form.village, crop_type: crop, bag_type: form.bag_type, trader_name: form.trader_name,
         bags, kgs, price_per_unit: price, sum_amount: sumAmount, commission, hamali, dharvay, chata,
@@ -193,6 +205,7 @@ export default function KantaBook() {
       const existingCredit = padamAll1.find(p => p.type === "credit" && Number(p.sl_no) === Number(finalSlNo) && Number(p.book_no || 1) === Number(finalBookNo));
       
       const creditData = {
+        kanta_entry_id: savedKantaId,
         book_no: finalBookNo, sl_no: finalSlNo, date: form.date, type: "credit", 
         party_name: form.farmer_name, village: form.village, amount: sumAmount, commission, 
         hamali, dharvay, chata, net_amount: netPayable
@@ -282,6 +295,7 @@ export default function KantaBook() {
 
       // 6. Save Bazaar Bill
       const bbData = {
+        kanta_entry_id: savedKantaId,
         book_no: uBook, bill_no: uBill, kanta_sl_no: finalSlNo, date: form.date, 
         trader_name: form.trader_name, farmer_name: form.farmer_name, crop_type: crop, bag_type: form.bag_type, 
         bags: bazaarBags, quintals: bQuintals, kgs: bLeftoverKgs, price_per_unit: price, 
@@ -330,6 +344,7 @@ export default function KantaBook() {
         await fetch(`${API_BASE_URL}/bazaarpayments`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            kanta_entry_id: savedKantaId,
             book_no: uBook, sl_no: uBill, trader_name: form.trader_name, crop_type: crop,
             crop_date: form.date, expected_payment_date: expectedPaymentDate, amount: dayTotal, is_credited: false
           })
@@ -350,75 +365,110 @@ export default function KantaBook() {
         await fetch(`${API_BASE_URL}/padam`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            kanta_entry_id: savedKantaId,
             book_no: uBook, sl_no: uBill, date: form.date, type: "debit",
             party_name: form.trader_name, crop_type: crop, amount: dayTotal, net_amount: dayTotal
           })
         });
       }
 
-      // 🔥 WORKFLOW AUTO: KATHA BOOK DEBIT & COMMISSION SYNC
-      try {
-        const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
-        const kathaAll = await kathaRes.json();
-        
-        // 1. Sync Katha Book (Trader Debit)
-        const existingKathaDebit = kathaAll.find(k => k.record_type === "debit" && k.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && k.date === form.date);
-        const kDebitPayload = {
-          record_type: "debit",
-          trader_name: form.trader_name,
-          date: form.date, // Actual Date of Purchase
-          amount: dayTotal,
-          bill_no: `${uBook}-${uBill}`,
-          book_no: uBook,
-          sl_no: uBill,
-          is_auto_generated: true
-        };
+ // 🔥 WORKFLOW AUTO: KATHA BOOK DEBIT & COMMISSION SYNC
+try {
+  const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
+  const kathaAll = await kathaRes.json();
 
-        if (existingKathaDebit) {
-          if (dayTotal > 0) {
-            await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, { 
-              method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kDebitPayload) 
-            });
-          } else {
-            await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, { method: "DELETE" });
-          }
-        } else if (dayTotal > 0) {
-          await fetch(`${API_BASE_URL}/kathabook`, { 
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kDebitPayload) 
-          });
-        }
+  const ensureOk = async (res) => {
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || `Request failed: ${res.status}`);
+    return text ? JSON.parse(text) : null;
+  };
 
-        // 2. Sync Katha Book (Daily Commission)
-        const takResForComm = await fetch(`${API_BASE_URL}/takpatti`);
-        const takAllForComm = await takResForComm.json();
-        const dailyComm = takAllForComm.filter(t => t.date === form.date).reduce((s, t) => s + (Number(t.commission) || 0), 0);
-        
-        const existingKathaComm = kathaAll.find(k => k.record_type === "commission" && k.date === form.date);
-        const kCommPayload = {
-          record_type: "commission",
-          trader_name: "", 
-          date: form.date,
-          amount: dailyComm,
-          bill_no: "",
-          is_auto_generated: true
-        };
+  // 1) DEBIT SIDE
+  const existingKathaDebit = kathaAll.find(
+    k =>
+      k.record_type === "debit" &&
+      k.kanta_entry_id === savedKantaId
+  );
 
-        if (existingKathaComm) {
-          if (dailyComm > 0) {
-            await fetch(`${API_BASE_URL}/kathabook/${existingKathaComm._id || existingKathaComm.id}`, { 
-              method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kCommPayload) 
-            });
-          } else {
-            await fetch(`${API_BASE_URL}/kathabook/${existingKathaComm._id || existingKathaComm.id}`, { method: "DELETE" });
-          }
-        } else if (dailyComm > 0) {
-          await fetch(`${API_BASE_URL}/kathabook`, { 
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kCommPayload) 
-          });
-        }
-      } catch (kathaErr) {
-        console.error("KathaBook Sync Failed:", kathaErr);
-      }
+  const kDebitPayload = {
+    kanta_entry_id: savedKantaId,
+    record_type: "debit",
+    trader_name: form.trader_name,
+    date: form.date,
+    amount: dayTotal,
+    book_no: uBook,
+    sl_no: uBill,
+    bill_no: `${uBook}-${uBill}`,
+    is_auto_generated: true
+  };
+
+  if (existingKathaDebit) {
+    if (dayTotal > 0) {
+      const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(kDebitPayload)
+      });
+      await ensureOk(res);
+    } else {
+      const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, {
+        method: "DELETE"
+      });
+      await ensureOk(res);
+    }
+  } else if (dayTotal > 0) {
+    const res = await fetch(`${API_BASE_URL}/kathabook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(kDebitPayload)
+    });
+    await ensureOk(res);
+  }
+
+  // 2) COMMISSION SECTION
+  const takResForComm = await fetch(`${API_BASE_URL}/takpatti`);
+  const takAllForComm = await takResForComm.json();
+  const dailyComm = takAllForComm
+    .filter(t => t.date === form.date)
+    .reduce((s, t) => s + (Number(t.commission) || 0), 0);
+
+  const existingKathaComm = kathaAll.find(
+    k => k.record_type === "commission" && k.date === form.date
+  );
+
+  const kCommPayload = {
+    kanta_entry_id: savedKantaId,
+    record_type: "commission",
+    date: form.date,
+    amount: dailyComm,
+    is_auto_generated: true
+  };
+
+  if (existingKathaComm) {
+    if (dailyComm > 0) {
+      const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaComm._id || existingKathaComm.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(kCommPayload)
+      });
+      await ensureOk(res);
+    } else {
+      const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaComm._id || existingKathaComm.id}`, {
+        method: "DELETE"
+      });
+      await ensureOk(res);
+    }
+  } else if (dailyComm > 0) {
+    const res = await fetch(`${API_BASE_URL}/kathabook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(kCommPayload)
+    });
+    await ensureOk(res);
+  }
+} catch (kathaErr) {
+  console.error("KathaBook Sync Failed:", kathaErr);
+}
 
       setLoading(false);
       setForm(EMPTY_FORM);
@@ -438,7 +488,7 @@ export default function KantaBook() {
       book_no: row.book_no ?? 1, sl_no: row.sl_no ?? "", date: row.date ?? "",
       farmer_name: row.farmer_name ?? "", village: row.village ?? "", crop_type: row.crop_type ?? "",
       bags: row.bags != null ? row.bags : "", kgs: row.kgs != null ? row.kgs : "", bag_type: row.bag_type ?? "",
-      price_per_unit: row.price_per_unit ?? "", trader_name: row.trader_name?.toLowerCase() ?? "", bazaar: row.bazaar ?? "",
+      price_per_unit: row.price_per_unit ?? "", trader_name: row.trader_name?? "", bazaar: row.bazaar ?? "",
     });
     setEditId(row._id || row.id);
     setShowForm(true);

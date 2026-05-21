@@ -117,61 +117,66 @@ const handleConfirmSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
   try {
-    // 1. Mark as credited
-    const updatedPayment = { ...confirmModal, ...confirmForm, is_credited: true };
-    await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedPayment),
-    });
-
-    // 2. Sync to Katha Book (Credit)
-const kData = {
-  record_type: "credit",
-  trader_name: confirmModal.trader_name,
-  date: confirmForm.credited_date,
-  amount: confirmModal.amount,
-  book_no: confirmModal.book_no, // Ensure these are passed
-  sl_no: confirmModal.sl_no,
-  bill_no: `${confirmModal.book_no}-${confirmModal.sl_no}`,
-  is_auto_generated: true
+// 1. Mark as credited inside Bazaar Payments
+const updatedPayment = { 
+  ...confirmModal, 
+  bank: confirmForm.bank, 
+  credited_date: confirmForm.credited_date, 
+  is_credited: true 
 };
 
-await fetch(`${API_BASE_URL}/kathabook`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    record_type: "credit",
-    trader_name,
-    amount,
-    date,
-    book_no: payment.book_no,   // 🔥 ADD THIS
-    bill_no: payment.bill_no    // 🔥 KEEP THIS
-  })
+await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
+  method: "PUT", 
+  headers: { "Content-Type": "application/json" }, 
+  body: JSON.stringify(updatedPayment),
 });
 
-    setConfirmModal(null);
-    load();
-  } catch (err) { console.error(err); }
+// ✅ Backend will automatically create/update the KathaBook credit entry.
+// Do NOT post to /kathabook here.
+setConfirmModal(null);
+load();
+  } catch (err) { 
+    console.error("Confirmation error:", err); 
+  }
   setLoading(false);
 };
 
-  const handleUnmark = async (payment) => {
+const handleUnmark = async (payment) => {
     if (!window.confirm("Unmark this payment as credited? This will remove the credit from the Katha Book.")) return;
     try {
-      const updatedPayment = { ...payment, is_credited: false, credited_date: null, bank: null };
+      // 1. Reset payment properties back to default status options to update bank display cards
+      const clearPayload = { 
+        is_credited: false, 
+        credited_date: null, 
+        bank: null 
+      };
+      
       await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id || payment.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedPayment),
+        method: "PUT", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify(clearPayload),
       });
 
+      // 2. 🔥 FIX: Fetch the KathaBook list and explicitly wipe the manual matching credit row card line item
       const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
       const kathaAll = await kathaRes.json();
+      
       const targetCredit = kathaAll.find(k => 
-        k.record_type === "credit" && k.book_no === payment.book_no && k.sl_no === payment.sl_no && k.trader_name?.toLowerCase() === payment.trader_name?.toLowerCase()
+        k.record_type === "credit" && 
+        k.kanta_entry_id === payment.kanta_entry_id
       );
-      if (targetCredit) await fetch(`${API_BASE_URL}/kathabook/${targetCredit._id || targetCredit.id}`, { method: "DELETE" });
+      
+      if (targetCredit) {
+        await fetch(`${API_BASE_URL}/kathabook/${targetCredit._id || targetCredit.id}`, { 
+          method: "DELETE" 
+        });
+      }
 
       load();
-    } catch (err) { console.error("Unmark error:", err); }
-  };
+    } catch (err) { 
+      console.error("Unmark sync error:", err); 
+    }
+};
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this record?")) return;

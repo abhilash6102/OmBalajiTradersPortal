@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const bazaarPaymentSchema = new mongoose.Schema(
   {
     sl_no: { type: Number },
-    kanta_entry_id: { type: String },
+    kanta_entry_id: { type: String, index: true }, // Link to Kanta entry
     trader_name: { type: String, required: true },
     crop_type: { type: String },
     crop_date: { type: String, required: true },
@@ -12,10 +12,12 @@ const bazaarPaymentSchema = new mongoose.Schema(
     is_credited: { type: Boolean, default: false },
     credited_date: { type: String },
     bank: { type: String },
-    kanta_entry_id: { type: String }
+    bill_no: { type: String },
+    book_no: { type: Number, required: true }
   },
   { timestamps: true }
 );
+
 
 const BazaarPayment = mongoose.model("BazaarPayment", bazaarPaymentSchema);
 

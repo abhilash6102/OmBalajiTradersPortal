@@ -3,35 +3,99 @@ import KathaBook from "../models/kathabook.js";
 
 const router = express.Router();
 
+/* =========================
+   CREATE ENTRY (SAFE + NO bill_no)
+========================= */
 router.post("/", async (req, res) => {
   try {
-    const entry = new KathaBook(req.body);
+    const data = req.body;
+
+    if (!data.record_type || !data.amount || !data.date) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // 🔥 COMMISSION HANDLING (IMPORTANT FIX)
+    if (data.record_type === "commission") {
+      delete data.trader_name;
+
+      // ✅ CREATE MONTH FIELD FOR GROUPING
+      const d = new Date(data.date);
+      data.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    // 🔥 duplicate prevention
+    const billNo =
+      data.bill_no || (data.book_no && data.sl_no
+        ? `${data.book_no}-${data.sl_no}`
+        : null);
+
+    const exists = await KathaBook.findOne({
+      kanta_entry_id: data.kanta_entry_id,
+      record_type: data.record_type,
+      date: data.date,
+      amount: data.amount,
+      bill_no: billNo
+    });
+
+    if (exists) {
+      return res.status(200).json(exists);
+    }
+
+    const entry = new KathaBook({
+      ...data,
+      bill_no: billNo
+    });
+
     const saved = await entry.save();
+
     res.status(201).json(saved);
+
   } catch (error) {
     console.error("KathaBook Save Error:", error);
     res.status(500).json({ message: error.message });
   }
 });
 
+/* =========================
+   GET ALL
+========================= */
 router.get("/", async (req, res) => {
   try {
-    const data = await KathaBook.find().sort({ date: 1, createdAt: 1 });
+    const data = await KathaBook.find().sort({ date: -1, createdAt: -1 });
     res.json(data);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
+/* =========================
+   UPDATE
+========================= */
 router.put("/:id", async (req, res) => {
   try {
-    const updated = await KathaBook.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+
+    // ✅ If date is updated, re-calculate the month field
+    if (updateData.date && updateData.record_type === "commission") {
+      const d = new Date(updateData.date);
+      updateData.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    const updated = await KathaBook.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
+/* =========================
+   DELETE
+========================= */
 router.delete("/:id", async (req, res) => {
   try {
     await KathaBook.findByIdAndDelete(req.params.id);
