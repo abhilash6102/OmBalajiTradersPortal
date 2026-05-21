@@ -4,7 +4,7 @@ import KathaBook from "../models/kathabook.js";
 const router = express.Router();
 
 /* =========================
-   CREATE ENTRY (SAFE + NO bill_no)
+   CREATE ENTRY (SAFE)
 ========================= */
 router.post("/", async (req, res) => {
   try {
@@ -23,18 +23,11 @@ router.post("/", async (req, res) => {
       data.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     }
 
-    // 🔥 duplicate prevention
-    const billNo =
-      data.bill_no || (data.book_no && data.sl_no
-        ? `${data.book_no}-${data.sl_no}`
-        : null);
-
     const exists = await KathaBook.findOne({
       kanta_entry_id: data.kanta_entry_id,
       record_type: data.record_type,
       date: data.date,
       amount: data.amount,
-      bill_no: billNo
     });
 
     if (exists) {
@@ -42,8 +35,7 @@ router.post("/", async (req, res) => {
     }
 
     const entry = new KathaBook({
-      ...data,
-      bill_no: billNo
+      ...data
     });
 
     const saved = await entry.save();

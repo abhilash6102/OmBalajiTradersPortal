@@ -264,7 +264,10 @@ export default function KathaBook() {
                                 if (!row) return <tr key={`c-empty-${i}`} className="h-[49px] border-b border-border/50"><td colSpan={3}></td></tr>;
                                 return (
                                   <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
-                                    <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">{row.bill_no || "—"}</td>
+                    
+<td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
+  {row.book_no ? `${row.book_no}-${row.sl_no || "—"}` : "—"}
+</td>
                                     <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
                                     <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-emerald-600">₹{formatMoney(row.amount)}</td>
                                   </tr>
@@ -317,7 +320,9 @@ export default function KathaBook() {
                                 if (!row) return <tr key={`d-empty-${i}`} className="h-[49px] border-b border-border/50"><td colSpan={3}></td></tr>;
                                 return (
                                   <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
-                                    <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">{row.bill_no || "—"}</td>
+                                    <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
+                                      {row.book_no ? `${row.book_no}-${row.sl_no || "—"}` : "—"}
+                                    </td>
                                     <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
                                     <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-rose-600">₹{formatMoney(row.amount)}</td>
                                   </tr>

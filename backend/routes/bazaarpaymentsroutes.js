@@ -67,8 +67,8 @@ router.put("/:id", async (req, res) => {
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
     // 🔥 AUTOMATION: SYNC TO KATHA BOOK
-    const billNo = `${payment.book_no || 1}-${payment.sl_no || 1}`;
 
+    
     if (payment.is_credited === true) {
       // Create or Update the Credit record in KathaBook
       await KathaBook.findOneAndUpdate(
@@ -79,7 +79,6 @@ router.put("/:id", async (req, res) => {
           trader_name: payment.trader_name,
           date: payment.credited_date, // Using the new credited date
           amount: payment.amount,
-          bill_no: billNo,
           book_no: payment.book_no,
           sl_no: payment.sl_no,
           is_auto_generated: true
