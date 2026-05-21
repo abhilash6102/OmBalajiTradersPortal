@@ -60,40 +60,45 @@ router.get("/", async (req, res) => {
   }
 });
 
-/* =========================
-   GENERIC UPDATE & SYNC
-========================= */
 router.put("/:id", async (req, res) => {
   try {
+    // 1. Update the payment status first
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    // 🔥 FIX: Calculate the correct bill_no format
-    const billNo = payment.bill_no || `${payment.book_no}-${payment.sl_no}`;
+    // 2. FORCE the Bill No format
+    // We construct it here to ensure it's NEVER missing
+    const correctBillNo = `${payment.book_no || 1}-${payment.sl_no || 1}`;
 
     if (payment.is_credited === true) {
-      // ✅ Use kanta_entry_id AND record_type to find the specific entry to update/create
-      await KathaBook.findOneAndUpdate(
-        { 
-          kanta_entry_id: payment.kanta_entry_id, 
-          record_type: "credit" 
-        },
-        {
-          kanta_entry_id: payment.kanta_entry_id,
-          record_type: "credit",
-          trader_name: payment.trader_name,
-          date: payment.credited_date, // The date the money actually hit the bank
-          amount: payment.amount,
-          bill_no: billNo, // ✅ This now carries the "1-1" format correctly
-          book_no: payment.book_no,
-          sl_no: payment.sl_no,
-          is_auto_generated: true
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      // 3. Search by ID + Type to ensure we hit the exact credit record
+      // We do NOT use bill_no in the find filter to avoid "not found" errors
+      const filter = { 
+        kanta_entry_id: payment.kanta_entry_id, 
+        record_type: "credit" 
+      };
+
+      const update = {
+        kanta_entry_id: payment.kanta_entry_id,
+        record_type: "credit",
+        trader_name: payment.trader_name,
+        date: payment.credited_date, 
+        amount: payment.amount,
+        bill_no: correctBillNo, // ✅ Guaranteed format
+        book_no: payment.book_no,
+        sl_no: payment.sl_no,
+        is_auto_generated: true
+      };
+
+      await KathaBook.findOneAndUpdate(filter, update, { 
+        upsert: true, 
+        new: true, 
+        setDefaultsOnInsert: true 
+      });
+      
     } else {
-      // If payment is unmarked, remove the credit record
-      await KathaBook.deleteOne({
+      // Unmark: remove credit
+      await KathaBook.deleteMany({
         kanta_entry_id: payment.kanta_entry_id,
         record_type: "credit"
       });
