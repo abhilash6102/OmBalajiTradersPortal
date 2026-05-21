@@ -4,7 +4,6 @@ const padamSchema = new mongoose.Schema(
   {
     book_no: { type: Number, default: 1 },
     sl_no: { type: Number },
-    bill_no: { type: String, required: true },
     date: { type: String, required: true },
     type: { type: String, enum: ["credit", "debit"], required: true },
     party_name: { type: String, required: true }, // Used for both Farmer and Trader
