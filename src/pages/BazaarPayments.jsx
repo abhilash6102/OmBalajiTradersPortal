@@ -117,24 +117,24 @@ const handleConfirmSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
   try {
-// 1. Mark as credited inside Bazaar Payments
-const updatedPayment = { 
-  ...confirmModal, 
-  bank: confirmForm.bank, 
-  credited_date: confirmForm.credited_date, 
-  is_credited: true 
-};
+    // 🔥 Ensure book_no and sl_no are explicitly included!
+    const updatedPayment = { 
+      ...confirmModal, 
+      bank: confirmForm.bank, 
+      credited_date: confirmForm.credited_date, 
+      is_credited: true,
+      book_no: confirmModal.book_no, // Explicitly pass these
+      sl_no: confirmModal.sl_no      // Explicitly pass these
+    };
 
-await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
-  method: "PUT", 
-  headers: { "Content-Type": "application/json" }, 
-  body: JSON.stringify(updatedPayment),
-});
+    await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
+      method: "PUT", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(updatedPayment),
+    });
 
-// ✅ Backend will automatically create/update the KathaBook credit entry.
-// Do NOT post to /kathabook here.
-setConfirmModal(null);
-load();
+    setConfirmModal(null);
+    load();
   } catch (err) { 
     console.error("Confirmation error:", err); 
   }
