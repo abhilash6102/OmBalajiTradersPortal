@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const padamSchema = new mongoose.Schema(
   {
-    book_no: { type: Number, default: 1 },
     sl_no: { type: Number },
     date: { type: String, required: true },
     type: { type: String, enum: ["credit", "debit"], required: true },
