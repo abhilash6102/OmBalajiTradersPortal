@@ -350,27 +350,39 @@ if (!finalSlNo) finalSlNo = 1;
           })
         });
       }
-
-      // 9. Sync Padam Debit (Trader)
-      const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
-      const padamAll2 = await padamRes2.json();
       
-      const existingDebit = padamAll2.find(p => p.type === "debit" && p.party_name?.toLowerCase() === form.trader_name?.toLowerCase() && p.crop_type === crop && p.date === form.date);
+// 9. Sync Padam Debit (Trader)
+const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
+const padamAll2 = await padamRes2.json();
 
-      if (existingDebit) {
-        await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, {
-          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...existingDebit, amount: dayTotal, net_amount: dayTotal })
-        });
-      } else if (dayTotal > 0) {
-        await fetch(`${API_BASE_URL}/padam`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            kanta_entry_id: savedKantaId,
-            book_no: uBook, sl_no: uBill, date: form.date, type: "debit",
-            party_name: form.trader_name, crop_type: crop, amount: dayTotal, net_amount: dayTotal
-          })
-        });
-      }
+// 🔥 CRITICAL FIX: Match by kanta_entry_id AND type='debit' 
+// Do NOT rely on date/crop only, as multiple bills might exist
+const existingDebit = padamAll2.find(p => 
+  p.type === "debit" && 
+  p.kanta_entry_id === savedKantaId 
+);
+
+const debitData = {
+  kanta_entry_id: savedKantaId,
+  book_no: uBook,         // Ensure this is the Bazaar Book No
+  sl_no: uBill,           // Ensure this is the Bazaar Bill No (converted to number)
+  date: form.date, 
+  type: "debit",
+  party_name: form.trader_name,
+  crop_type: crop, 
+  amount: dayTotal, 
+  net_amount: dayTotal
+};
+
+if (existingDebit) {
+  await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(debitData)
+  });
+} else if (dayTotal > 0) {
+  await fetch(`${API_BASE_URL}/padam`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(debitData)
+  });
+}
 
  // 🔥 WORKFLOW AUTO: KATHA BOOK DEBIT & COMMISSION SYNC
 try {

@@ -81,32 +81,41 @@ const load = async () => {
 
   const toggleDate = (key) => setCollapsedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
-const getNextSlNo = (type) => {
-  const filtered = allData.filter(item => item.type === type);
+// 🔥 FIXED: Pass the type so sequences stay independent
+const getNextSlNo = (type, allEntries) => {
+  const filtered = allEntries.filter(item => item.type === type);
+  
+  // Find max book number for this specific type
+  const maxBook = filtered.length > 0 
+    ? Math.max(...filtered.map(p => Number(p.book_no || 1))) 
+    : 1;
 
-  const maxSl = filtered.reduce(
-    (max, item) => Math.max(max, Number(item.sl_no || 0)),
-    0
-  );
+  // Find max SL for that specific book and type
+  const inMaxBook = filtered.filter(p => Number(p.book_no || 1) === maxBook);
+  const maxSl = inMaxBook.reduce((max, item) => Math.max(max, Number(item.sl_no || 0)), 0);
 
-  return maxSl + 1;
+  if (maxSl >= 100) return { book_no: maxBook + 1, sl_no: 1 };
+  return { book_no: maxBook, sl_no: maxSl + 1 };
 };
 
-  const handleAddNew = async () => {
-    const nextSl = await getNextSlNo("credit");
-    setEditId(null);
-    setForm({ ...EMPTY_FORM, sl_no: nextSl, date: new Date().toISOString().split("T")[0] });
-    setShowForm(true);
-  };
+// Update handleAddNew
+const handleAddNew = async () => {
+  const { book_no, sl_no } = getNextSlNo("credit", allData);
+  setEditId(null);
+  setForm({ ...EMPTY_FORM, type: "credit", book_no, sl_no, date: new Date().toISOString().split("T")[0] });
+  setShowForm(true);
+};
 
-  const setField = async (key, value) => {
-    if (key === "type" && !editId) {
-      const nextSl = await getNextSlNo(value);
-      setForm(prev => ({ ...prev, [key]: value, sl_no: nextSl }));
-    } else {
-      setForm(prev => ({ ...prev, [key]: value }));
-    }
-  };
+// Update setField to react to Type changes
+const setField = async (key, value) => {
+  if (key === "type" && !editId) {
+    const { book_no, sl_no } = getNextSlNo(value, allData);
+    setForm(prev => ({ ...prev, [key]: value, book_no, sl_no }));
+  } else {
+    setForm(prev => ({ ...prev, [key]: value }));
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -358,7 +367,7 @@ const getNextSlNo = (type) => {
                             <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b hover:bg-muted/20 cursor-pointer">
                               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                                 <span className="text-red-700 font-medium">
-                                  {row.book_no || 1}</span><span>-{row.sl_no || "—"}
+                                  {row.book_no || 1}</span><span> - {row.sl_no || "—"}
                                 </span>
                               </td>
                               <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{row.party_name.toUpperCase()}</td>
