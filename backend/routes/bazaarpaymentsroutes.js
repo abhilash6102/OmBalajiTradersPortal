@@ -61,50 +61,75 @@ router.get("/", async (req, res) => {
 });
 
 router.put("/:id", async (req, res) => {
-  try {
-    // Update the payment record
-    const updatedPayment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedPayment) return res.status(404).json({ message: "Payment not found" });
 
-    // 🔥 SYNC TO KATHA BOOK
-    if (updatedPayment.is_credited === true) {
-      // Use the database record to ensure we have book/sl numbers
-      const billNo = `${updatedPayment.book_no || 1}-${updatedPayment.sl_no || 1}`;
-      
+  try {
+
+    const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+
+
+    // 🔥 AUTOMATION: SYNC TO KATHA BOOK
+
+    if (payment.is_credited === true) {
+
+      // Create or Update the Credit record in KathaBook
+
       await KathaBook.findOneAndUpdate(
-        { 
-          kanta_entry_id: updatedPayment.kanta_entry_id, 
-          record_type: "credit",
-          book_no: updatedPayment.book_no,
-          sl_no: updatedPayment.sl_no
-        },
+
+        { kanta_entry_id: payment.kanta_entry_id, record_type: "credit" },
+
         {
-          kanta_entry_id: updatedPayment.kanta_entry_id,
+
+          kanta_entry_id: payment.kanta_entry_id,
+
           record_type: "credit",
-          trader_name: updatedPayment.trader_name,
-          date: updatedPayment.credited_date,
-          amount: updatedPayment.amount,
-          bill_no: billNo,
-          book_no: updatedPayment.book_no,
-          sl_no: updatedPayment.sl_no,
+
+          trader_name: payment.trader_name,
+
+          date: payment.credited_date, // Using the new credited date
+
+          amount: payment.amount,
+
+          bill_no: payment.bill_no,
+
+          book_no: payment.book_no,
+
+          sl_no: payment.sl_no,
+
           is_auto_generated: true
+
         },
+
         { upsert: true, new: true }
+
       );
+
     } else {
-      // Unmark case
-      await KathaBook.deleteMany({
-        kanta_entry_id: updatedPayment.kanta_entry_id,
-        record_type: "credit",
-        book_no: updatedPayment.book_no,
-        sl_no: updatedPayment.sl_no
+
+      // If payment is unmarked, wipe the credit record
+
+      await KathaBook.deleteOne({
+
+        kanta_entry_id: payment.kanta_entry_id,
+
+        record_type: "credit"
+
       });
+
     }
 
-    res.json(updatedPayment);
+
+
+    res.json(payment);
+
   } catch (error) {
+
     res.status(500).json({ message: error.message });
+
   }
+
 });
 
 /* =========================
