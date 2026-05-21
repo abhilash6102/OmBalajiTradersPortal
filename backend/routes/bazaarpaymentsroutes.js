@@ -63,73 +63,40 @@ router.get("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
 
   try {
-
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-
-
     // 🔥 AUTOMATION: SYNC TO KATHA BOOK
+    const billNo = `${payment.book_no || 1}-${payment.sl_no || 1}`;
 
     if (payment.is_credited === true) {
-
       // Create or Update the Credit record in KathaBook
-
       await KathaBook.findOneAndUpdate(
-
         { kanta_entry_id: payment.kanta_entry_id, record_type: "credit" },
-
         {
-
           kanta_entry_id: payment.kanta_entry_id,
-
           record_type: "credit",
-
           trader_name: payment.trader_name,
-
           date: payment.credited_date, // Using the new credited date
-
           amount: payment.amount,
-
-          bill_no: payment.bill_no,
-
+          bill_no: billNo,
           book_no: payment.book_no,
-
           sl_no: payment.sl_no,
-
           is_auto_generated: true
-
         },
-
         { upsert: true, new: true }
-
       );
-
     } else {
-
       // If payment is unmarked, wipe the credit record
-
       await KathaBook.deleteOne({
-
         kanta_entry_id: payment.kanta_entry_id,
-
         record_type: "credit"
-
       });
-
     }
-
-
-
     res.json(payment);
-
   } catch (error) {
-
     res.status(500).json({ message: error.message });
-
   }
-
 });
 
 /* =========================

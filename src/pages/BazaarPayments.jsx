@@ -123,8 +123,8 @@ const handleConfirmSubmit = async (e) => {
       bank: confirmForm.bank, 
       credited_date: confirmForm.credited_date, 
       is_credited: true,
-      book_no: confirmModal.book_no, // Explicitly pass these
-      sl_no: confirmModal.sl_no      // Explicitly pass these
+      book_no: confirmModal.book_no || 1, // Explicitly pass these
+      sl_no: confirmModal.sl_no || 1      // Explicitly pass these
     };
 
     await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
