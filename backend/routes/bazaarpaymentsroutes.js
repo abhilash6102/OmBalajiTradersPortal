@@ -68,26 +68,31 @@ router.put("/:id", async (req, res) => {
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    // 🔥 AUTOMATION: SYNC TO KATHA BOOK
+    // 🔥 FIX: Calculate the correct bill_no format
+    const billNo = payment.bill_no || `${payment.book_no}-${payment.sl_no}`;
+
     if (payment.is_credited === true) {
-      // Create or Update the Credit record in KathaBook
+      // ✅ Use kanta_entry_id AND record_type to find the specific entry to update/create
       await KathaBook.findOneAndUpdate(
-        { kanta_entry_id: payment.kanta_entry_id, record_type: "credit" },
+        { 
+          kanta_entry_id: payment.kanta_entry_id, 
+          record_type: "credit" 
+        },
         {
           kanta_entry_id: payment.kanta_entry_id,
           record_type: "credit",
           trader_name: payment.trader_name,
-          date: payment.credited_date, // Using the new credited date
+          date: payment.credited_date, // The date the money actually hit the bank
           amount: payment.amount,
-          bill_no: payment.bill_no,
+          bill_no: billNo, // ✅ This now carries the "1-1" format correctly
           book_no: payment.book_no,
           sl_no: payment.sl_no,
           is_auto_generated: true
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true }
       );
     } else {
-      // If payment is unmarked, wipe the credit record
+      // If payment is unmarked, remove the credit record
       await KathaBook.deleteOne({
         kanta_entry_id: payment.kanta_entry_id,
         record_type: "credit"
