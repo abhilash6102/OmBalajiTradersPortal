@@ -60,52 +60,53 @@ router.get("/", async (req, res) => {
   }
 });
 
+/* =========================
+   GENERIC UPDATE & SYNC (WITH UNIQUE PER PAYMENT)
+========================= */
 router.put("/:id", async (req, res) => {
   try {
-    // 1. Update the payment status first
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    // 2. FORCE the Bill No format
-    // We construct it here to ensure it's NEVER missing
-    const correctBillNo = `${payment.book_no || 1}-${payment.sl_no || 1}`;
+    // 🔥 Build correct bill_no (book_no-sl_no) if missing
+    const billNo = payment.bill_no || `${payment.book_no}-${payment.sl_no}`;
 
     if (payment.is_credited === true) {
-      // 3. Search by ID + Type to ensure we hit the exact credit record
-      // We do NOT use bill_no in the find filter to avoid "not found" errors
-      const filter = { 
-        kanta_entry_id: payment.kanta_entry_id, 
-        record_type: "credit" 
-      };
-
-      const update = {
+      // ✅ Use combination of kanta_entry_id + book_no + sl_no + record_type
+      //    so each payment gets its OWN credit row.
+      await KathaBook.findOneAndUpdate(
+        {
+          kanta_entry_id: payment.kanta_entry_id,
+          record_type: "credit",
+          book_no: payment.book_no,
+          sl_no: payment.sl_no
+        },
+        {
+          kanta_entry_id: payment.kanta_entry_id,
+          record_type: "credit",
+          trader_name: payment.trader_name,
+          date: payment.credited_date,     // The date money was credited
+          amount: payment.amount,
+          bill_no: billNo,
+          book_no: payment.book_no,
+          sl_no: payment.sl_no,
+          is_auto_generated: true
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } else {
+      // Delete only the specific credit row for this payment
+      await KathaBook.deleteOne({
         kanta_entry_id: payment.kanta_entry_id,
         record_type: "credit",
-        trader_name: payment.trader_name,
-        date: payment.credited_date, 
-        amount: payment.amount,
-        bill_no: correctBillNo, // ✅ Guaranteed format
         book_no: payment.book_no,
-        sl_no: payment.sl_no,
-        is_auto_generated: true
-      };
-
-      await KathaBook.findOneAndUpdate(filter, update, { 
-        upsert: true, 
-        new: true, 
-        setDefaultsOnInsert: true 
-      });
-      
-    } else {
-      // Unmark: remove credit
-      await KathaBook.deleteMany({
-        kanta_entry_id: payment.kanta_entry_id,
-        record_type: "credit"
+        sl_no: payment.sl_no
       });
     }
 
     res.json(payment);
   } catch (error) {
+    console.error("PUT /bazaarpayments error:", error);
     res.status(500).json({ message: error.message });
   }
 });
