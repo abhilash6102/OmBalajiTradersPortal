@@ -61,17 +61,33 @@ router.get("/", async (req, res) => {
 });
 
 /* =========================
-   GENERIC UPDATE & UNMARK SYNC
+   GENERIC UPDATE & SYNC
 ========================= */
 router.put("/:id", async (req, res) => {
   try {
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!payment) {
-      return res.status(404).json({ message: "Payment not found" });
-    }
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    // 🔥 AUTOMATION: If unmarked (is_credited is false), wipe the credit row from KathaBook
-    if (payment.is_credited === false) {
+    // 🔥 AUTOMATION: SYNC TO KATHA BOOK
+    if (payment.is_credited === true) {
+      // Create or Update the Credit record in KathaBook
+      await KathaBook.findOneAndUpdate(
+        { kanta_entry_id: payment.kanta_entry_id, record_type: "credit" },
+        {
+          kanta_entry_id: payment.kanta_entry_id,
+          record_type: "credit",
+          trader_name: payment.trader_name,
+          date: payment.credited_date, // Using the new credited date
+          amount: payment.amount,
+          bill_no: payment.bill_no,
+          book_no: payment.book_no,
+          sl_no: payment.sl_no,
+          is_auto_generated: true
+        },
+        { upsert: true, new: true }
+      );
+    } else {
+      // If payment is unmarked, wipe the credit record
       await KathaBook.deleteOne({
         kanta_entry_id: payment.kanta_entry_id,
         record_type: "credit"

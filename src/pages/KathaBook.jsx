@@ -235,7 +235,6 @@ export default function KathaBook() {
               <div key={tName} className="mb-8">
                 <button type="button" onClick={() => toggleTrader(tName)} className="flex items-center gap-2 mb-2 w-full text-left font-bold text-primary text-lg">
                   {collapsedTraders[tName] ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  <BookOpen className="w-5 h-5 text-muted-foreground" />
                   <span className="uppercase tracking-wide">{tName}</span>
                 </button>
 
@@ -243,10 +242,65 @@ export default function KathaBook() {
                   <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
                       
-                      {/* 🔥 DEBIT SIDE (Always on the LEFT) */}
+
+
+                      {/* 🔥 CREDIT SIDE (Always on the RIGHT) */}
+                      <div>
+                        <div className="bg-emerald-50/50 px-4 py-3 border-b border-border font-bold text-sm text-emerald-800 text-center tracking-widest uppercase">
+                          CREDIT — Traders
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-muted/30 border-b border-border text-muted-foreground">
+                                <th className="px-4 py-3 font-medium text-left uppercase text-xs tracking-wider">Bill No</th>
+                                <th className="px-4 py-3 font-medium text-center uppercase text-xs tracking-wider">Credited Date</th>
+                                <th className="px-4 py-3 font-medium text-right uppercase text-xs tracking-wider">Amount (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Array.from({ length: maxRows }).map((_, i) => {
+                                const row = records.credits[i];
+                                if (!row) return <tr key={`c-empty-${i}`} className="h-[49px] border-b border-border/50"><td colSpan={3}></td></tr>;
+                                return (
+                                  <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
+                                    <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">{row.bill_no || "—"}</td>
+                                    <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
+                                    <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-emerald-600">₹{formatMoney(row.amount)}</td>
+                                  </tr>
+                                  
+                                  
+                                );
+                              })}
+                              {/* CREDIT TOTALS */}
+                              <tr className="border-t border-border/50">
+                                <td colSpan={2} className="px-4 py-3 text-right uppercase text-xs tracking-widest text-muted-foreground">Total Credit:</td>
+                                <td className="px-4 py-3 text-right font-mono font-bold">₹{formatMoney(totalCredit)}</td>
+                              </tr>
+                              {/* BALANCE ROW */}
+                              {totalDebit > totalCredit ? (
+                                <tr>
+                                  <td colSpan={2} className="px-4 py-3 text-right uppercase text-xs tracking-widest text-amber-600 font-bold">To Balance c/d:</td>
+                                  <td className="px-4 py-3 text-right font-mono font-bold text-amber-600">₹{formatMoney(balanceDiff)}</td>
+                                </tr>
+                              ) : (
+                                <tr><td colSpan={3} className="h-[45px]"></td></tr>
+                              )}
+                              {/* GRAND TOTAL */}
+                              
+                              <tr className="border-t-2 border-emerald-600/50 bg-emerald-50/30">
+                                <td colSpan={2} className="px-4 py-3 text-right uppercase text-sm tracking-widest font-bold text-emerald-800">Grand Total:</td>
+                                <td className="px-4 py-3 text-right font-mono font-bold text-base text-emerald-700">₹{formatMoney(overallGrandTotal)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                                            {/* 🔥 DEBIT SIDE (Always on the LEFT) */}
                       <div>
                         <div className="bg-rose-50/50 px-4 py-3 border-b border-border font-bold text-sm text-rose-800 text-center tracking-widest uppercase">
-                          DEBIT (Dr) — Purchases
+                          DEBIT — Traders
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
@@ -287,56 +341,6 @@ export default function KathaBook() {
                               <tr className="border-t-2 border-rose-600/50 bg-rose-50/30">
                                 <td colSpan={2} className="px-4 py-3 text-right uppercase text-sm tracking-widest font-bold text-rose-800">Grand Total:</td>
                                 <td className="px-4 py-3 text-right font-mono font-bold text-base text-rose-700">₹{formatMoney(overallGrandTotal)}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {/* 🔥 CREDIT SIDE (Always on the RIGHT) */}
-                      <div>
-                        <div className="bg-emerald-50/50 px-4 py-3 border-b border-border font-bold text-sm text-emerald-800 text-center tracking-widest uppercase">
-                          CREDIT (Cr) — Payments
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="bg-muted/30 border-b border-border text-muted-foreground">
-                                <th className="px-4 py-3 font-medium text-left uppercase text-xs tracking-wider">Bill No</th>
-                                <th className="px-4 py-3 font-medium text-center uppercase text-xs tracking-wider">Credited Date</th>
-                                <th className="px-4 py-3 font-medium text-right uppercase text-xs tracking-wider">Amount (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {Array.from({ length: maxRows }).map((_, i) => {
-                                const row = records.credits[i];
-                                if (!row) return <tr key={`c-empty-${i}`} className="h-[49px] border-b border-border/50"><td colSpan={3}></td></tr>;
-                                return (
-                                  <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
-                                    <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">{row.bill_no || "—"}</td>
-                                    <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
-                                    <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-emerald-600">₹{formatMoney(row.amount)}</td>
-                                  </tr>
-                                );
-                              })}
-                              {/* CREDIT TOTALS */}
-                              <tr className="border-t border-border/50">
-                                <td colSpan={2} className="px-4 py-3 text-right uppercase text-xs tracking-widest text-muted-foreground">Total Credit:</td>
-                                <td className="px-4 py-3 text-right font-mono font-bold">₹{formatMoney(totalCredit)}</td>
-                              </tr>
-                              {/* BALANCE ROW */}
-                              {totalDebit > totalCredit ? (
-                                <tr>
-                                  <td colSpan={2} className="px-4 py-3 text-right uppercase text-xs tracking-widest text-amber-600 font-bold">To Balance c/d:</td>
-                                  <td className="px-4 py-3 text-right font-mono font-bold text-amber-600">₹{formatMoney(balanceDiff)}</td>
-                                </tr>
-                              ) : (
-                                <tr><td colSpan={3} className="h-[45px]"></td></tr>
-                              )}
-                              {/* GRAND TOTAL */}
-                              <tr className="border-t-2 border-emerald-600/50 bg-emerald-50/30">
-                                <td colSpan={2} className="px-4 py-3 text-right uppercase text-sm tracking-widest font-bold text-emerald-800">Grand Total:</td>
-                                <td className="px-4 py-3 text-right font-mono font-bold text-base text-emerald-700">₹{formatMoney(overallGrandTotal)}</td>
                               </tr>
                             </tbody>
                           </table>

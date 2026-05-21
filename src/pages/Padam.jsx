@@ -282,7 +282,7 @@ const getNextSlNo = (type) => {
               {!collapsedDates[dateKey] && (
                 <div className="flex flex-col md:flex-row border border-border rounded-xl overflow-hidden bg-card shadow-sm text-sm">
                   <div className="flex-1 border-b md:border-b-0 md:border-r border-border flex flex-col">
-                    <div className="bg-green-50 text-green-800 font-bold p-3 border-b text-center tracking-wider">CREDIT — Farmers</div>
+                    <div className="bg-green-50 text-green-800 font-bold p-3 border-b text-center tracking-wider">CREDIT — FARMERS</div>
                     <div className="flex-1 overflow-x-auto min-h-[150px]">
                       <table className="w-full">
                         <thead className="bg-muted/50 border-b">
@@ -341,7 +341,7 @@ const getNextSlNo = (type) => {
                   </div>
 
                   <div className="flex-1 flex flex-col">
-                    <div className="bg-red-50 text-red-800 font-bold p-3 border-b text-center tracking-wider">DEBIT — Traders</div>
+                    <div className="bg-red-50 text-red-800 font-bold p-3 border-b text-center tracking-wider">DEBIT — TRADERS</div>
                     <div className="flex-1 overflow-x-auto min-h-[150px]">
                       <table className="w-full">
                         <thead className="bg-muted/50 border-b">
