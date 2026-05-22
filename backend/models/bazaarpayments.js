@@ -13,6 +13,7 @@ const bazaarPaymentSchema = new mongoose.Schema(
     is_credited: { type: Boolean, default: false },
     credited_date: { type: String },
     bank: { type: String },
+    sync_key: { type: String, index: true },
   },
   { timestamps: true }
 );

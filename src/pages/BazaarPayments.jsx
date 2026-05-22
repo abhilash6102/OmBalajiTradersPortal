@@ -112,70 +112,58 @@ export default function BazaarPayments() {
     setConfirmForm({ bank: payment.bank || "", credited_date: cDate });
   };
 
-  // 🔥 WORKFLOW AUTO: BazaarPayments MARK -> KathaBook CREDIT
+
 const handleConfirmSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
   try {
-    // 🔥 Ensure book_no and sl_no are explicitly included!
     const updatedPayment = { 
-      ...confirmModal, 
       bank: confirmForm.bank, 
       credited_date: confirmForm.credited_date, 
-      is_credited: true,
-      book_no: confirmModal.book_no, // Explicitly pass these
-      sl_no: confirmModal.sl_no      // Explicitly pass these
+      is_credited: true
     };
 
-    await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
+    const res = await fetch(`${API_BASE_URL}/bazaarpayments/${confirmModal._id || confirmModal.id}`, {
       method: "PUT", 
       headers: { "Content-Type": "application/json" }, 
       body: JSON.stringify(updatedPayment),
     });
 
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to mark payment");
+    }
+
     setConfirmModal(null);
-    load();
+    await load(); // refresh the list
   } catch (err) { 
     console.error("Confirmation error:", err); 
+    alert("Failed to mark payment: " + err.message);
+  } finally {
+    setLoading(false);
   }
-  setLoading(false);
 };
 
 const handleUnmark = async (payment) => {
-    if (!window.confirm("Unmark this payment as credited? This will remove the credit from the Katha Book.")) return;
-    try {
-      // 1. Reset payment properties back to default status options to update bank display cards
-      const clearPayload = { 
-        is_credited: false, 
-        credited_date: null, 
-        bank: null 
-      };
-      
-      await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id || payment.id}`, {
-        method: "PUT", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify(clearPayload),
-      });
+  if (!window.confirm("Unmark this payment as credited?")) return;
 
-      // 2. 🔥 FIX: Fetch the KathaBook list and explicitly wipe the manual matching credit row card line item
-      const kathaRes = await fetch(`${API_BASE_URL}/kathabook`);
-      const kathaAll = await kathaRes.json();
-      
-      const targetCredit = kathaAll.find(k => 
-        k.record_type === "credit" && 
-        k.kanta_entry_id === payment.kanta_entry_id
-      );
-      
-      if (targetCredit) {
-        await fetch(`${API_BASE_URL}/kathabook/${targetCredit._id || targetCredit.id}`, { 
-          method: "DELETE" 
-        });
-      }
+  try {
+    const clearPayload = { 
+      is_credited: false, 
+      credited_date: null, 
+      bank: null 
+    };
+    
+    await fetch(`${API_BASE_URL}/bazaarpayments/${payment._id}`, {
+      method: "PUT", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(clearPayload),
+    });
 
-      load();
-    } catch (err) { 
-      console.error("Unmark sync error:", err); 
-    }
+    load();
+  } catch (err) { 
+    console.error("Unmark error:", err); 
+  }
 };
 
   const handleDelete = async (id) => {

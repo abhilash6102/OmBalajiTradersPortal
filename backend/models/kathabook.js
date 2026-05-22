@@ -29,10 +29,12 @@ const kathabookSchema = new mongoose.Schema(
     kanta_entry_id: { type: String },
 is_auto_generated: { type: Boolean, default: false },
 month: { type: String, index: true },
+sync_key: { type: String, index: true },
   },
   
-  { timestamps: true }
+  { timestamps: true },
+  
 );
-
+kathabookSchema.index({ sync_key: 1, record_type: 1 }, { unique: true });
 const KathaBook = mongoose.model("KathaBook", kathabookSchema);
 export default KathaBook;
