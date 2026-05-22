@@ -40,7 +40,7 @@ function groupBills(entries) {
     let rawBill = String(e.bill_no || "0");
     if (rawBill.includes("-")) rawBill = rawBill.split("-")[1];
 
-    // 🔥 FIX: Convert trader name to lowercase for case-insensitive grouping
+    // 🔥 Convert trader name to lowercase for case-insensitive grouping
     const normalizedTrader = (e.trader_name || "").toLowerCase();
     const billKey = `${e.book_no || 1}-${rawBill}_${normalizedTrader}`;
 
@@ -57,9 +57,19 @@ function groupBills(entries) {
   });
 
   return Object.entries(byDate)
-    .sort(([a], [b]) => b.localeCompare(a))
+    .sort(([a], [b]) => b.localeCompare(a)) // Sort dates newest first
     .map(([date, billsObj]) => {
-      const bills = Object.values(billsObj).sort((a, b) => parseInt(a.bill_no, 10) - parseInt(b.bill_no, 10));
+      // 🔥 FIX: Sort by Book No FIRST, then by Bill No
+      const bills = Object.values(billsObj).sort((a, b) => {
+        const bookA = parseInt(a.book_no, 10) || 1;
+        const bookB = parseInt(b.book_no, 10) || 1;
+        
+        if (bookA !== bookB) {
+          return bookA - bookB; // Sort Books (1 before 2)
+        }
+        // If Books are the same, sort by Bill No (1 before 2 before 100)
+        return parseInt(a.bill_no, 10) - parseInt(b.bill_no, 10);
+      });
       return { date, bills };
     });
 }

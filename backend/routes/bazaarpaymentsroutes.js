@@ -18,7 +18,6 @@ router.post("/", async (req, res) => {
       expected_payment_date,
       amount,
       kanta_entry_id,
-      bill_no, // ✅ coming from JSX
     } = req.body;
 
     if (!book_no || !sl_no) {
@@ -32,7 +31,6 @@ router.post("/", async (req, res) => {
     const payment = await BazaarPayment.create({
       book_no,
       sl_no,
-      bill_no, // ✅ store as-is from frontend
       trader_name,
       crop_type,
       crop_date,
@@ -60,24 +58,29 @@ router.get("/", async (req, res) => {
   }
 });
 
+/* =========================
+   GENERIC UPDATE & SYNC
+========================= */
 router.put("/:id", async (req, res) => {
-
   try {
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    // 🔥 AUTOMATION: SYNC TO KATHA BOOK
+    // 🔥 FIX: Include trader_name in the find filter so A and B get separate rows
+    const filter = { 
+      kanta_entry_id: payment.kanta_entry_id, 
+      record_type: "credit",
+      trader_name: payment.trader_name // <--- THIS IS THE MISSING LINK
+    };
 
-    
     if (payment.is_credited === true) {
-      // Create or Update the Credit record in KathaBook
       await KathaBook.findOneAndUpdate(
-        { kanta_entry_id: payment.kanta_entry_id, record_type: "credit" },
+        filter, // Uses the filter with trader_name
         {
           kanta_entry_id: payment.kanta_entry_id,
           record_type: "credit",
           trader_name: payment.trader_name,
-          date: payment.credited_date, // Using the new credited date
+          date: payment.credited_date,
           amount: payment.amount,
           book_no: payment.book_no,
           sl_no: payment.sl_no,
@@ -86,11 +89,8 @@ router.put("/:id", async (req, res) => {
         { upsert: true, new: true }
       );
     } else {
-      // If payment is unmarked, wipe the credit record
-      await KathaBook.deleteOne({
-        kanta_entry_id: payment.kanta_entry_id,
-        record_type: "credit"
-      });
+      // Unmark: delete only the specific credit for this trader
+      await KathaBook.deleteOne(filter);
     }
     res.json(payment);
   } catch (error) {
