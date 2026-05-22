@@ -66,31 +66,31 @@ router.put("/:id", async (req, res) => {
     const payment = await BazaarPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    // 🔥 FIX: Include trader_name in the find filter so A and B get separate rows
+    // 🔥 THE CRAZY BUG FIX: 
+    // We use the Payment's own unique Database ID as the anchor so they never overwrite each other!
     const filter = { 
-      kanta_entry_id: payment.kanta_entry_id, 
-      record_type: "credit",
-      trader_name: payment.trader_name // <--- THIS IS THE MISSING LINK
+      kanta_entry_id: payment._id.toString(), // <--- PERFECT UNIQUE LINK
+      record_type: "credit"
     };
 
     if (payment.is_credited === true) {
       await KathaBook.findOneAndUpdate(
-        filter, // Uses the filter with trader_name
+        filter,
         {
-          kanta_entry_id: payment.kanta_entry_id,
+          kanta_entry_id: payment._id.toString(), // Save the unique ID here
           record_type: "credit",
           trader_name: payment.trader_name,
           date: payment.credited_date,
           amount: payment.amount,
-          book_no: payment.book_no,
-          sl_no: payment.sl_no,
+          book_no: payment.book_no, // Stays in sync with Bazaar Bills
+          sl_no: payment.sl_no,     // Stays in sync with Bazaar Bills
           is_auto_generated: true
         },
         { upsert: true, new: true }
       );
     } else {
-      // Unmark: delete only the specific credit for this trader
-      await KathaBook.deleteOne(filter);
+      // Unmark: wipe the credit record safely
+      await KathaBook.deleteMany(filter);
     }
     res.json(payment);
   } catch (error) {
@@ -109,8 +109,9 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Payment not found" });
     }
 
-await KathaBook.deleteMany({
-      kanta_entry_id: payment.kanta_entry_id,
+    // 🔥 Clean up using the unique Payment ID
+    await KathaBook.deleteMany({
+      kanta_entry_id: payment._id.toString(),
       record_type: "credit",
     });
 
