@@ -245,12 +245,18 @@ const buildCommissionHTML = () => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-display">Print Katha Book</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="
+  w-[95vw] sm:max-w-2xl 
+  max-h-[90vh] overflow-y-auto 
+  rounded-2xl p-4 sm:p-6
+">
+   <DialogHeader className="mb-4">
+  <DialogTitle className="text-lg sm:text-xl font-semibold">
+    Print Katha Book
+  </DialogTitle>
+</DialogHeader>
 
-        <div className="flex gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
           <Button variant={printType === "ledger" ? "default" : "outline"} onClick={() => setPrintType("ledger")} className="flex-1">
             <BookOpen className="w-4 h-4 mr-2" /> Trader Ledgers
           </Button>
