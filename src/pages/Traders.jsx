@@ -262,58 +262,66 @@ export default function Traders() {
 
       {/* TABLE (NOW COLLAPSIBLE) */}
       {!showForm && !collapsed && filtered.length > 0 && (
-        <div className="bg-card rounded-xl border overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+<div className="bg-card rounded-xl border overflow-hidden shadow-sm">
+  <div className="overflow-x-auto">
+    <table className="w-full text-sm min-w-[600px]">
+      
+      <thead>
+        <tr className="bg-muted/50 border-b">
+          <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+            Ref No
+          </th>
+          <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+            Code
+          </th>
+          <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+            Trader Name
+          </th>
+          <th></th>
+        </tr>
+      </thead>
 
-              <thead>
-                <tr className="bg-muted/50 border-b">
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Ref No</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Trader Name</th>
-                  <th></th>
-                </tr>
-              </thead>
+      <tbody>
+        {filtered.map(row => (
+          <tr
+            key={row._id}
+            onClick={() => handleEdit(row)}
+            className="hover:bg-muted/40 cursor-pointer border-b border-border"
+          >
+            <td className="px-4 py-2 font-bold text-primary whitespace-nowrap">
+              {row.ref_no}
+            </td>
 
-              <tbody>
-                {filtered.map(row => (
-                  <tr
-                    key={row._id}
-                    onClick={() => handleEdit(row)}
-                    className="hover:bg-muted/40 cursor-pointer border-b border-border"
-                  >
-                    <td className="px-4 py-2 font-bold text-primary">
-                      {row.ref_no}
-                    </td>
+            <td className="px-4 py-2 font-semibold text-muted-foreground whitespace-nowrap">
+              {row.short_form?.toUpperCase()}
+            </td>
 
-                    <td className="px-4 py-2 font-semibold text-muted-foreground">
-                      {row.short_form?.toUpperCase()}
-                    </td>
+            {/* 🔥 MAIN FIX HERE */}
+            <td className="px-4 py-2 whitespace-nowrap">
+              <div className="truncate max-w-[250px] sm:max-w-none">
+                {row.name.toUpperCase()}
+              </div>
+            </td>
 
-                    <td className="px-4 py-2">
-                      {row.name.toUpperCase()}
-                    </td>
+            <td className="px-4 py-2 text-right whitespace-nowrap">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(row._id);
+                }}
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
 
-                    <td className="px-4 py-2 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(row._id);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </td>
-
-                  </tr>
-                ))}
-              </tbody>
-
-            </table>
-          </div>
-        </div>
+    </table>
+  </div>
+</div>
       )}
 
     </div>
