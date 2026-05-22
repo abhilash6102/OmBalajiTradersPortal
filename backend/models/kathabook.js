@@ -35,6 +35,6 @@ sync_key: { type: String, index: true },
   { timestamps: true },
   
 );
-kathabookSchema.index({ sync_key: 1, record_type: 1 }, { unique: true });
+kathabookSchema.index({ sync_key: 1, record_type: 1 });
 const KathaBook = mongoose.model("KathaBook", kathabookSchema);
 export default KathaBook;

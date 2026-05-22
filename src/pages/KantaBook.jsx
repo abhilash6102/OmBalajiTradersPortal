@@ -1,17 +1,16 @@
 import { API_BASE_URL } from "../api/config";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X, Save, ChevronDown, ChevronRight, Printer } from "lucide-react";
+import { Plus, Trash2, X, Save, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "../components/PageHeader";
-import KantaPrintModal from "../components/KantaPrintModal";
 
-const BAG_WEIGHTS = { "30kgs": 30, "35kgs": 35, "49kgs": 49, "59kgs": 59, "60kgs": 60 };
+const BAG_WEIGHTS = { "none": 0, "30kgs": 30, "35kgs": 35, "49kgs": 49, "59kgs": 59, "60kgs": 60 };
 const BAG_TYPE_OPTIONS = Object.keys(BAG_WEIGHTS);
-const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia", "Cotton", "Castor Seeds"];
+const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Wheat","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
 
 const HAMALI_RATE = (bagType) => (bagType === "59kgs" || bagType === "60kgs") ? 12.38 : 11.52;
 const DHARVAY_RATE = 5.15;
@@ -234,64 +233,54 @@ if (!finalSlNo) finalSlNo = 1;
       const bLeftoverKgs = roundToInt(bazaarTotalKg % 100);
       const bbNet = roundToInt((bazaarTotalKg / 100) * price);
 
-      // 5. Get existing Bazaar Bills and determine book/bill number
-      const bazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
-      const bazaarAll = await bazaarRes.json();
+// 5. Get existing Bazaar Bills and check for existing bill for same trader+crop+date
+const bazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
+const bazaarAll = await bazaarRes.json();
 
-      let uBook = 1, uBill = 1;
+let uBook = 1, uBill = 1;
 
-      const existingBillForSameCrop = bazaarAll.find(b => 
-        b.date === form.date && 
-        b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && 
-        b.crop_type === crop
-      );
+// Look for an existing bill with the same trader, same crop, and same date
+const existingBill = bazaarAll.find(b => 
+  b.date === form.date && 
+  b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && 
+  b.crop_type === crop
+);
 
-      if (existingBillForSameCrop) {
-        uBook = parseInt(existingBillForSameCrop.book_no, 10) || 1;
-        const bNoStr = String(existingBillForSameCrop.bill_no || "1");
-        uBill = parseInt(bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr, 10) || 1;
-      } else {
-        const existingBillForDifferentCrop = bazaarAll.find(b => 
-          b.date === form.date && 
-          b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && 
-          b.crop_type !== crop
-        );
-        
-        if (existingBillForDifferentCrop) {
-          let maxBill = 0;
-          const sameDateBills = bazaarAll.filter(b => b.date === form.date && b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase());
-          sameDateBills.forEach(b => {
-            const bNoStr = String(b.bill_no || "0");
-            const val = parseInt(bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr, 10);
-            if (!isNaN(val) && val > maxBill) maxBill = val;
-          });
-          uBill = maxBill + 1;
-          uBook = existingBillForDifferentCrop.book_no || 1;
-        } else {
-          let maxBk = 1;
-          bazaarAll.forEach(b => { 
-            const val = parseInt(b.book_no, 10); 
-            if (!isNaN(val) && val > maxBk) maxBk = val; 
-          });
-          
-          const inMaxBk = bazaarAll.filter(b => parseInt(b.book_no, 10) === maxBk || (maxBk === 1 && !b.book_no));
-          let maxBl = 0;
-          
-          inMaxBk.forEach(b => {
-            const bNoStr = String(b.bill_no || "0");
-            const val = parseInt(bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr, 10);
-            if (!isNaN(val) && val > maxBl) maxBl = val;
-          });
-          
-          if (maxBl >= 100) { 
-            uBook = maxBk + 1; 
-            uBill = 1; 
-          } else { 
-            uBook = maxBk; 
-            uBill = maxBl + 1; 
-          }
-        }
-      }
+if (existingBill) {
+  // Reuse the same book and bill number
+  uBook = existingBill.book_no;
+  let billNo = existingBill.bill_no;
+  if (typeof billNo === 'string' && billNo.includes('-')) {
+    billNo = billNo.split('-')[1];
+  }
+  uBill = parseInt(billNo, 10);
+} else {
+  // No existing bill for this combination – create a new sequential number
+  if (bazaarAll.length === 0) {
+    uBook = 1; uBill = 1;
+  } else {
+    let maxBook = 1;
+    for (const b of bazaarAll) {
+      const book = parseInt(b.book_no, 10);
+      if (!isNaN(book) && book > maxBook) maxBook = book;
+    }
+    const billsInMaxBook = bazaarAll.filter(b => parseInt(b.book_no, 10) === maxBook);
+    let maxBill = 0;
+    for (const b of billsInMaxBook) {
+      let raw = String(b.bill_no || "0");
+      if (raw.includes("-")) raw = raw.split("-")[1];
+      const num = parseInt(raw, 10);
+      if (!isNaN(num) && num > maxBill) maxBill = num;
+    }
+    if (maxBill >= 100) {
+      uBook = maxBook + 1;
+      uBill = 1;
+    } else {
+      uBook = maxBook;
+      uBill = maxBill + 1;
+    }
+  }
+}
 
       // 6. Save Bazaar Bill
       const bbData = {
@@ -351,36 +340,42 @@ if (!finalSlNo) finalSlNo = 1;
         });
       }
       
-// 9. Sync Padam Debit (Trader)
+// 9. Sync Padam Debit (Trader) – group by bazaar bill number
 const padamRes2 = await fetch(`${API_BASE_URL}/padam`);
 const padamAll2 = await padamRes2.json();
 
-// 🔥 CRITICAL FIX: Match by kanta_entry_id AND type='debit' 
-// Do NOT rely on date/crop only, as multiple bills might exist
+// Find existing debit entry for this specific bazaar bill (book_no + sl_no)
 const existingDebit = padamAll2.find(p => 
   p.type === "debit" && 
-  p.kanta_entry_id === savedKantaId 
+  p.book_no === uBook && 
+  p.sl_no === uBill
 );
 
 const debitData = {
-  kanta_entry_id: savedKantaId,
-  book_no: uBook,         // Ensure this is the Bazaar Book No
-  sl_no: uBill,           // Ensure this is the Bazaar Bill No (converted to number)
-  date: form.date, 
+  kanta_entry_id: savedKantaId,   // still store the latest Kanta ID (optional)
+  book_no: uBook,
+  sl_no: uBill,
+  date: form.date,
   type: "debit",
   party_name: form.trader_name,
-  crop_type: crop, 
-  amount: dayTotal, 
+  crop_type: crop,
+  amount: dayTotal,       // sum of all bills under this bill number
   net_amount: dayTotal
 };
 
 if (existingDebit) {
+  // Update the existing debit entry with the new aggregated amount
   await fetch(`${API_BASE_URL}/padam/${existingDebit._id || existingDebit.id}`, {
-    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(debitData)
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(debitData)
   });
 } else if (dayTotal > 0) {
+  // Create a new debit entry only for the first bill of this group
   await fetch(`${API_BASE_URL}/padam`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(debitData)
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(debitData)
   });
 }
 
@@ -395,62 +390,60 @@ try {
     return text ? JSON.parse(text) : null;
   };
 
-  // 1) DEBIT SIDE
-  const existingKathaDebit = kathaAll.find(
-    k =>
-      k.record_type === "debit" &&
-      k.kanta_entry_id === savedKantaId
-  );
+// 1) DEBIT SIDE – group by bazaar bill number, not by kanta_entry_id
+const existingKathaDebit = kathaAll.find(
+  k => k.record_type === "debit" && 
+       k.book_no === uBook && 
+       k.sl_no === uBill
+);
 
-  const kDebitPayload = {
-    kanta_entry_id: savedKantaId,
-    record_type: "debit",
-    trader_name: form.trader_name,
-    date: form.date,
-    amount: dayTotal,
-    book_no: uBook,
-    sl_no: uBill,
-    bill_no: `${uBook}-${uBill}`,
-    is_auto_generated: true
-  };
+const kDebitPayload = {
+  kanta_entry_id: savedKantaId,   // store latest Kanta ID (optional)
+  record_type: "debit",
+  trader_name: form.trader_name,
+  date: form.date,
+  amount: dayTotal,
+  book_no: uBook,
+  sl_no: uBill,
+  bill_no: `${uBook}-${uBill}`,
+  is_auto_generated: true
+};
 
-  if (existingKathaDebit) {
-    if (dayTotal > 0) {
-      const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(kDebitPayload)
-      });
-      await ensureOk(res);
-    } else {
-      const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, {
-        method: "DELETE"
-      });
-      await ensureOk(res);
-    }
-  } else if (dayTotal > 0) {
-    const res = await fetch(`${API_BASE_URL}/kathabook`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(kDebitPayload)
-    });
-    await ensureOk(res);
-  }
+if (existingKathaDebit) {
+  // Update the existing debit entry (amount might change if dayTotal changes)
+  const res = await fetch(`${API_BASE_URL}/kathabook/${existingKathaDebit._id || existingKathaDebit.id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(kDebitPayload)
+  });
+  await ensureOk(res);
+} else if (dayTotal > 0) {
+  const res = await fetch(`${API_BASE_URL}/kathabook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(kDebitPayload)
+  });
+  await ensureOk(res);
+}
 
-  // 2) COMMISSION SECTION
+// 2) COMMISSION SECTION
   const takResForComm = await fetch(`${API_BASE_URL}/takpatti`);
   const takAllForComm = await takResForComm.json();
+  const safeDate = form.date.split("T")[0]; // 🔥 Safely strips any MongoDB timestamps
+  
   const dailyComm = takAllForComm
-    .filter(t => t.date === form.date)
+    .filter(t => t.date && t.date.split("T")[0] === safeDate)
     .reduce((s, t) => s + (Number(t.commission) || 0), 0);
 
   const existingKathaComm = kathaAll.find(
-    k => k.record_type === "commission" && k.date === form.date
+    k => k.record_type === "commission" && k.date && k.date.split("T")[0] === safeDate
   );
 
   const kCommPayload = {
     kanta_entry_id: savedKantaId,
     record_type: "commission",
+    trader_name: "", // 🔥 Explicitly empty to prevent backend rejection
+    bill_no: "",     // 🔥 Explicitly empty to prevent backend rejection
     date: form.date,
     amount: dailyComm,
     is_auto_generated: true
@@ -603,15 +596,23 @@ try {
           if (kCred) await fetch(`${API_BASE_URL}/kathabook/${kCred._id || kCred.id}`, { method: "DELETE" });
         }
 
-        // Recalculate Commission
+// Recalculate Commission
+        const safeDelDate = date.split("T")[0];
         const takResForComm = await fetch(`${API_BASE_URL}/takpatti`);
         const takAllForComm = await takResForComm.json();
-        const dailyComm = takAllForComm.filter(t => t.date === date && (t._id !== (tp?._id || tp?.id))).reduce((s, t) => s + (Number(t.commission) || 0), 0);
         
-        const kComm = kathaAll.find(k => k.record_type === "commission" && k.date === date);
+        const dailyComm = takAllForComm
+          .filter(t => t.date && t.date.split("T")[0] === safeDelDate && (t._id !== (tp?._id || tp?.id)))
+          .reduce((s, t) => s + (Number(t.commission) || 0), 0);
+        
+        const kComm = kathaAll.find(k => k.record_type === "commission" && k.date && k.date.split("T")[0] === safeDelDate);
+        
         if (kComm) {
           if (dailyComm > 0) { 
-            await fetch(`${API_BASE_URL}/kathabook/${kComm._id || kComm.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...kComm, amount: dailyComm }) }); 
+            await fetch(`${API_BASE_URL}/kathabook/${kComm._id || kComm.id}`, { 
+              method: "PUT", headers: { "Content-Type": "application/json" }, 
+              body: JSON.stringify({ ...kComm, amount: dailyComm }) 
+            }); 
           } else { 
             await fetch(`${API_BASE_URL}/kathabook/${kComm._id || kComm.id}`, { method: "DELETE" }); 
           }
@@ -639,15 +640,11 @@ try {
 
   return (
     <div className="pb-20">
-      <PageHeader title="Kanta Book" subtitle="Initial crop entry register">
+      <PageHeader title="Kanta Book" subtitle="Initial crop entry register — record all incoming agricultural produce">
         <div className="flex gap-2">
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" /> 
             New Entry
-          </Button>
-          <Button variant="outline" onClick={() => setShowPrint(true)}>
-            <Printer className="w-4 h-4 mr-2" /> 
-            Print
           </Button>
         </div>
       </PageHeader>
@@ -809,7 +806,6 @@ try {
         </div>
       ))}
 
-      <KantaPrintModal open={showPrint} onOpenChange={setShowPrint} entries={entries} />
     </div>
   );
 }

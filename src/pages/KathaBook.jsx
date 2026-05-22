@@ -1,11 +1,13 @@
 import { API_BASE_URL } from "../api/config";
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, X, Save, Search, ChevronDown, ChevronRight, BookOpen, Percent } from "lucide-react";
+import { Plus, Trash2, X, Save, Search, ChevronDown, ChevronRight, BookOpen, Percent,Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/PageHeader";
+import { Badge } from "@/components/ui/badge";
+import KathaPrintModal from "../components/KathaPrintModal";
 
 const formatMoney = (num) => Math.round(Number(num || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -16,6 +18,44 @@ const EMPTY_FORM = {
   amount: "",
   bill_no: ""
 };
+
+const TRADER_MAP = {
+  "sbom": "SRI BALAJI OIL MILL",
+  "rkep": "RADHA KRISHNA ENTERPRISES",
+  "gni": "GHAJANAND INDUSTRIES",
+  "lvi": "LAXMI VENKATESHWARA INDUSTRIES",
+  "lkt": "LAXMI KRISHNA TRADERS",
+  "slstc": "SRI LAXMI SRINIVASA TRADING COMPANY",
+  "srd": "SREE RAM DECORDIGATOR",
+  "rtc": "RADHIKA TRADING COMPANY",
+  "ai": "AAMINA INDUSTRIES",
+  "noi": "NOOR INDUSTRIES",
+  "ki": "KADHRI INDUSTRIES",
+  "pi": "PRAVEEN INDUSTRIES",
+  "lvtc": "LAXMI VENTAKESHWARA TRADING COMPANY",
+  "vltc": "VARALAXMI TRADING COMPANY",
+  "ttc": "TIRUMALA TRADING COMPANY",
+  "ptc": "PAVAN TRADING COMPANY",
+  "gt": "GOKUL TRADERS",
+  "ksg": "K SRIKANTH GUPTHA",
+  "ht": "HARSHITA TRADERS",
+  "vt": "VENKATESHWARA INDUSTRIES",
+  "krk": "KALAKONDA RAJESH KUMAR",
+  "vptc": "VAYUPUTRA TRADING COMPANY",
+  "svri": "SRI VENKATARAMANA INDUSTRIES",
+  "sri": "SADGURU RAGHAVENDRA INDUSTRIES",
+  "ni": "NARESH INDUSTRIES",
+  "srgt": "SRINIVAS RICE GRAIN TRADERS",
+  "vst": "VENKATA SAI TRADERS",
+  "skom": "SRI KRISHNA OIL MILL"
+};
+
+const getFullTraderName = (name) => {
+  if (!name) return "";
+  const cleanName = name.trim().toLowerCase();
+  return TRADER_MAP[cleanName] || name.toUpperCase(); // Expands code, or just capitalizes if not found
+};
+
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -32,7 +72,7 @@ export default function KathaBook() {
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("traders"); 
-  
+  const [showPrint, setShowPrint] = useState(false);
   const [collapsedTraders, setCollapsedTraders] = useState({});
   const [collapsedMonths, setCollapsedMonths] = useState({});
 
@@ -55,6 +95,14 @@ export default function KathaBook() {
   }, [entries]);
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+  const initial = {};
+  commissionEntries.forEach(([key]) => {
+    initial[key] = true; // collapsed by default
+  });
+  setCollapsedMonths(initial);
+}, [entries]);
 
   const setField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -145,8 +193,37 @@ export default function KathaBook() {
   });
   
   // Sort months newest first
-  const commissionEntries = Object.entries(commGroups).sort(([a], [b]) => b.localeCompare(a));
+const commissionEntries = Object.entries(commGroups)
+  .map(([sortKey, monthData]) => {
+    const filteredDays = Object.entries(monthData.days).filter(([dateKey]) => {
+      if (!searchFilter) return true;
 
+      const formatted = formatDate(dateKey); // dd/mm/yyyy
+      const raw = dateKey; // yyyy-mm-dd
+      const monthLabel = monthData.label.toLowerCase();
+      const search = searchFilter.toLowerCase();
+
+      return (
+        formatted.includes(search) ||
+        raw.includes(search) ||
+        monthLabel.includes(search)
+      );
+    });
+
+    if (filteredDays.length === 0) return null;
+
+    return [
+      sortKey,
+      {
+        ...monthData,
+        days: Object.fromEntries(filteredDays)
+      }
+    ];
+  })
+  .filter(Boolean)
+  .sort(([a], [b]) => b.localeCompare(a));
+
+  
   // TRADER LEDGER GROUPING LOGIC
   const traderRecords = entries.filter(e => e.record_type !== "commission");
   const filteredTraders = traderRecords.filter(t => !searchFilter || t.trader_name?.toLowerCase().includes(searchFilter.toLowerCase()));
@@ -166,17 +243,28 @@ export default function KathaBook() {
   return (
     <div className="pb-20">
       <PageHeader title="Katha Book" subtitle="Trader account ledgers & daily commissions">
-        {!showForm && (
+        {/* {!showForm && (
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" /> New Ledger Entry
           </Button>
-        )}
+          
+        )} */}
+        <div className="flex gap-2">
+          <Button onClick={handleAddNew}>
+            <Plus className="w-4 h-4 mr-2" /> 
+            New Ledger Entry
+          </Button>
+          <Button variant="outline" onClick={() => setShowPrint(true)}>
+            <Printer className="w-4 h-4 mr-2" /> 
+            Print
+          </Button>
+        </div>
       </PageHeader>
 
       {!showForm && (
         <div className="flex gap-2 mb-6 border-b border-border pb-px">
           <button onClick={() => setActiveTab("traders")} className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 ${activeTab === "traders" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Trader Ledgers</button>
-          <button onClick={() => setActiveTab("commissions")} className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 ${activeTab === "commissions" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Day-to-Day Commissions</button>
+          <button onClick={() => setActiveTab("commissions")} className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 ${activeTab === "commissions" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Commissions</button>
         </div>
       )}
 
@@ -203,7 +291,7 @@ export default function KathaBook() {
             {form.record_type !== "commission" && (
               <>
                 <div className="space-y-1.5"><Label className="text-xs">Trader Name <span className="text-destructive">*</span></Label><Input placeholder="Trader Name" value={form.trader_name} onChange={(e) => setField("trader_name", e.target.value)} required /></div>
-                <div className="space-y-1.5"><Label className="text-xs">Bill No. (Optional)</Label><Input placeholder="e.g. 1-1" value={form.bill_no} onChange={(e) => setField("bill_no", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label className="text-xs">Bill No</Label><Input placeholder="e.g. 1-1" value={form.bill_no} onChange={(e) => setField("bill_no", e.target.value)} /></div>
               </>
             )}
           </div>
@@ -218,24 +306,25 @@ export default function KathaBook() {
       {!showForm && activeTab === "traders" && (
         <>
           <div className="mb-4 relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search Trader..." value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="pl-9" />
+            <Input placeholder="Search Trader..." value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="pl-4" />
           </div>
 
           {traderLedgerEntries.length === 0 && <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm shadow-sm">No trader ledger records found.</div>}
 
           {traderLedgerEntries.map(([tName, records]) => {
-            const totalCredit = records.credits.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-            const totalDebit = records.debits.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-            const maxRows = Math.max(records.credits.length, records.debits.length);
+            const sortedCredits = [...records.credits].sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0));
+            const sortedDebits = [...records.debits].sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0));
+            const totalCredit = sortedCredits.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+            const totalDebit = sortedDebits.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+            const maxRows = Math.max(sortedCredits.length, sortedDebits.length);
             const overallGrandTotal = Math.max(totalCredit, totalDebit);
             const balanceDiff = Math.abs(totalCredit - totalDebit);
 
             return (
-              <div key={tName} className="mb-8">
+              <div key={tName} className="mb-5">
                 <button type="button" onClick={() => toggleTrader(tName)} className="flex items-center gap-2 mb-2 w-full text-left font-bold text-primary text-lg">
                   {collapsedTraders[tName] ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  <span className="uppercase tracking-wide">{tName}</span>
+                  <span className="uppercase tracking-wide font-semibold text-primary text-sm">{getFullTraderName(tName)}</span>
                 </button>
 
                 {!collapsedTraders[tName] && (
@@ -246,35 +335,34 @@ export default function KathaBook() {
 
                       {/* 🔥 CREDIT SIDE (Always on the RIGHT) */}
                       <div>
-                        <div className="bg-emerald-50/50 px-4 py-3 border-b border-border font-bold text-sm text-emerald-800 text-center tracking-widest uppercase">
+                        <div className="bg-green-50 text-green-800 text-sm font-bold p-3 border-b text-center tracking-wider uppercase">
                           CREDIT — Traders
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-muted/30 border-b border-border text-muted-foreground">
-                                <th className="px-4 py-3 font-medium text-left uppercase text-xs tracking-wider">Bill No</th>
-                                <th className="px-4 py-3 font-medium text-center uppercase text-xs tracking-wider">Credited Date</th>
-                                <th className="px-4 py-3 font-medium text-right uppercase text-xs tracking-wider">Amount (₹)</th>
+                                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Bill No</th>
+                                <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Credited Date</th>
+                                <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Amount (₹)</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {Array.from({ length: maxRows }).map((_, i) => {
-                                const row = records.credits[i];
-                                if (!row) return <tr key={`c-empty-${i}`} className="h-[49px] border-b border-border/50"><td colSpan={3}></td></tr>;
-                                return (
-                                  <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
-                    
-<td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
-  {row.book_no ? `${row.book_no}-${row.sl_no || "—"}` : "—"}
-</td>
-                                    <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
-                                    <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-emerald-600">₹{formatMoney(row.amount)}</td>
-                                  </tr>
-                                  
-                                  
-                                );
-                              })}
+                              {/* Sort credits by sl_no (ascending) */}
+                              {[...records.credits].sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0)).map((row) => (
+                                <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
+                                  <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
+                                    {row.book_no ? `${row.book_no} - ${row.sl_no || "—"}` : "—"}
+                                  </td>
+                                  <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
+                                  <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-emerald-600">₹{formatMoney(row.amount)}</td>
+                                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
                               {/* CREDIT TOTALS */}
                               <tr className="border-t border-border/50">
                                 <td colSpan={2} className="px-4 py-3 text-right uppercase text-xs tracking-widest text-muted-foreground">Total Credit:</td>
@@ -290,10 +378,9 @@ export default function KathaBook() {
                                 <tr><td colSpan={3} className="h-[45px]"></td></tr>
                               )}
                               {/* GRAND TOTAL */}
-                              
                               <tr className="border-t-2 border-emerald-600/50 bg-emerald-50/30">
-                                <td colSpan={2} className="px-4 py-3 text-right uppercase text-sm tracking-widest font-bold text-emerald-800">Grand Total:</td>
-                                <td className="px-4 py-3 text-right font-mono font-bold text-base text-emerald-700">₹{formatMoney(overallGrandTotal)}</td>
+                                <td colSpan={2} className="px-4 py-3 text-xs tracking-widest font-bold text-emerald-800">Grand Total:</td>
+                                <td className="px-4 py-3 text-right font-mono font-bold text-sm text-emerald-700">₹{formatMoney(overallGrandTotal)}</td>
                               </tr>
                             </tbody>
                           </table>
@@ -302,36 +389,37 @@ export default function KathaBook() {
 
                                             {/* 🔥 DEBIT SIDE (Always on the LEFT) */}
                       <div>
-                        <div className="bg-rose-50/50 px-4 py-3 border-b border-border font-bold text-sm text-rose-800 text-center tracking-widest uppercase">
+                        <div className="bg-rose-50/50 text-rose-800 text-sm font-bold p-3 border-b text-center tracking-wider uppercase">
                           DEBIT — Traders
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-muted/30 border-b border-border text-muted-foreground">
-                                <th className="px-4 py-3 font-medium text-left uppercase text-xs tracking-wider">Bill No</th>
-                                <th className="px-4 py-3 font-medium text-center uppercase text-xs tracking-wider">Purchase Date</th>
-                                <th className="px-4 py-3 font-medium text-right uppercase text-xs tracking-wider">Amount (₹)</th>
-                              </tr>
+                                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Bill No</th>
+                                <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Purchase Date</th>
+                                <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Amount (₹)</th>
+                               </tr>
                             </thead>
                             <tbody>
-                              {Array.from({ length: maxRows }).map((_, i) => {
-                                const row = records.debits[i];
-                                if (!row) return <tr key={`d-empty-${i}`} className="h-[49px] border-b border-border/50"><td colSpan={3}></td></tr>;
-                                return (
-                                  <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
-                                    <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
-                                      {row.book_no ? `${row.book_no}-${row.sl_no || "—"}` : "—"}
-                                    </td>
-                                    <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
-                                    <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-rose-600">₹{formatMoney(row.amount)}</td>
-                                  </tr>
-                                );
-                              })}
-                              {/* DEBIT TOTALS */}
+                              {[...records.debits].sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0)).map((row) => (
+                                <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer">
+                                  <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
+                                    {row.book_no ? `${row.book_no} - ${row.sl_no || "—"}` : "—"}
+                                  </td>
+                                  <td className="px-4 py-3 text-center whitespace-nowrap text-muted-foreground">{formatDate(row.date)}</td>
+                                  <td className="px-4 py-3 text-right whitespace-nowrap font-mono font-bold text-rose-600">₹{formatMoney(row.amount)}</td>
+                                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(row._id || row.id); }}>
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+   {/* DEBIT TOTALS */}
                               <tr className="border-t border-border/50">
                                 <td colSpan={2} className="px-4 py-3 text-right uppercase text-xs tracking-widest text-muted-foreground">Total Debit:</td>
-                                <td className="px-4 py-3 text-right font-mono font-bold">₹{formatMoney(totalDebit)}</td>
+                                <td className="px-4 py-3 text-right font-mono">₹{formatMoney(totalDebit)}</td>
                               </tr>
                               {/* BALANCE ROW */}
                               {totalCredit > totalDebit ? (
@@ -344,8 +432,8 @@ export default function KathaBook() {
                               )}
                               {/* GRAND TOTAL */}
                               <tr className="border-t-2 border-rose-600/50 bg-rose-50/30">
-                                <td colSpan={2} className="px-4 py-3 text-right uppercase text-sm tracking-widest font-bold text-rose-800">Grand Total:</td>
-                                <td className="px-4 py-3 text-right font-mono font-bold text-base text-rose-700">₹{formatMoney(overallGrandTotal)}</td>
+                                <td colSpan={2} className="px-4 py-3 text-xs tracking-widest font-bold text-rose-800">Grand Total:</td>
+                                <td className="px-4 py-3 text-right font-mono font-bold text-sm text-rose-700">₹{formatMoney(overallGrandTotal)}</td>
                               </tr>
                             </tbody>
                           </table>
@@ -364,6 +452,14 @@ export default function KathaBook() {
       {/* 🔥 CONTENT: DAILY COMMISSIONS */}
       {!showForm && activeTab === "commissions" && (
         <>
+        <div className="mb-4 relative max-w-sm">
+          <Input 
+            placeholder="Search Month or Date..." 
+            value={searchFilter} 
+            onChange={(e) => setSearchFilter(e.target.value)} 
+            className="pl-4" 
+          />
+        </div>
           {commissionEntries.length === 0 && (
             <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm shadow-sm mt-4">
               No daily commission records found.
@@ -380,10 +476,8 @@ export default function KathaBook() {
               <div key={sortKey} className="mb-6 mt-4 max-w-2xl">
                 <button type="button" onClick={() => toggleMonth(sortKey)} className="flex items-center gap-2 mb-2 w-full text-left font-semibold text-primary">
                   {collapsedMonths[sortKey] ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  <Percent className="w-4 h-4 text-primary" />
-                  <span className="text-base tracking-wide uppercase">
-                    {monthData.label} <span className="lowercase font-normal text-muted-foreground ml-1">({count} commissions)</span>
-                  </span>
+                  <span className="font-semibold text-primary text-sm">{monthData.label} </span>
+                  <Badge variant="secondary" className="text-xs">{count} commissions</Badge>
                 </button>
 
                 {!collapsedMonths[sortKey] && (
@@ -392,20 +486,20 @@ export default function KathaBook() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="bg-muted/30 border-b border-border text-muted-foreground">
-                            <th className="text-left px-6 py-2.5 font-medium whitespace-nowrap uppercase tracking-wider text-xs">Date</th>
-                            <th className="text-right px-6 py-2.5 font-medium whitespace-nowrap uppercase tracking-wider text-xs">Commission Amount (₹)</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Date</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"> Amount (₹)</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
                           {dayEntries.map(([dateKey, amt]) => (
                             <tr key={dateKey} className="hover:bg-muted/40 transition-colors">
-                              <td className="px-6 py-3 whitespace-nowrap font-mono">{formatDate(dateKey)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap font-mono">{formatDate(dateKey)}</td>
                               <td className="px-6 py-3 text-right font-mono font-medium whitespace-nowrap text-emerald-600">₹{formatMoney(amt)}</td>
                             </tr>
                           ))}
                           <tr className="bg-primary/5 font-bold border-t-2 border-primary/20">
-                            <td className="px-6 py-3 text-right uppercase tracking-widest text-primary text-xs">Monthly Total</td>
-                            <td className="px-6 py-3 text-right font-mono text-base text-primary whitespace-nowrap">₹{formatMoney(monthTotal)}</td>
+                            <td className="px-4 py-3 text-left text-primary text-xs">Monthly Total</td>
+                            <td className="px-6 py-3 text-right font-mono text-primary whitespace-nowrap">₹{formatMoney(monthTotal)}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -417,6 +511,12 @@ export default function KathaBook() {
           })}
         </>
       )}
+     <KathaPrintModal 
+  open={showPrint} 
+  onOpenChange={setShowPrint} 
+  entries={entries}
+  getFullTraderName={getFullTraderName}
+/>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 
-const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia", "Cotton", "Castor Seeds"];
+const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Wheat","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
 const BANK_LABELS = { sbi: "SBI", icici: "ICICI", union: "Union Bank", canara: "Canara Bank", other: "Other" };
 const BANK_COLORS = { sbi: "bg-blue-100 text-blue-700", icici: "bg-orange-100 text-orange-700", union: "bg-purple-100 text-purple-700", canara: "bg-green-100 text-green-700", other: "bg-gray-100 text-gray-700" };
 

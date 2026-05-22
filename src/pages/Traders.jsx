@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PageHeader from "../components/PageHeader";
-
+import { Badge } from "@/components/ui/badge";
 const EMPTY_FORM = {
   ref_no: "",
   short_form: "",
@@ -117,7 +117,7 @@ export default function Traders() {
 
       <PageHeader
         title="Traders"
-        subtitle="Manage trader codes and reference numbers"
+        subtitle="Manage Trader details and information"
       >
         {!showForm && (
           <Button onClick={handleAddNew}>
@@ -241,22 +241,24 @@ export default function Traders() {
       )}
 
       {/* 🔥 COLLAPSIBLE HEADER (NEW ADDITION ONLY) */}
-      {!showForm && (
-        <button
-          type="button"
-          onClick={() => setCollapsed(prev => !prev)}
-          className="flex items-center gap-x-0 mb-3 w-full text-left font-semibold text-primary"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-          <span className="ml-2 text-sm bg-muted px-2 py-0.5 rounded">
-            {traderCount} Traders
-          </span>
-        </button>
-      )}
+{!showForm && (
+  <button
+    type="button"
+    onClick={() => setCollapsed(prev => !prev)}
+    className="flex items-center gap-x-0 mb-3 w-full text-left font-semibold text-primary"
+  >
+    {collapsed ? (
+      <ChevronRight className="w-4 h-4" />
+    ) : (
+      <ChevronDown className="w-4 h-4" />
+    )}
+    
+    {/* ✅ Badge is now cleanly placed right after the chevron icons */}
+    <Badge variant="secondary" className="ml-2 text-xs">
+      {traderCount} traders
+    </Badge>
+  </button>
+)}
 
       {/* TABLE (NOW COLLAPSIBLE) */}
       {!showForm && !collapsed && filtered.length > 0 && (

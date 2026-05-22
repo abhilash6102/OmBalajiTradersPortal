@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 
-const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia", "Cotton", "Castor Seeds"];
+const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Wheat","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
 const BAG_WEIGHTS = { "30kgs": 30, "35kgs": 35, "49kgs": 49, "59kgs": 59, "60kgs": 60 };
 const BAG_TYPE_OPTIONS = Object.keys(BAG_WEIGHTS);
 
@@ -24,6 +24,44 @@ const EMPTY_FORM = {
   bags: "", quintals: "", kgs: "", price_per_unit: "", sub_total: ""
 };
 
+const TRADER_MAP = {
+  "sbom": "SRI BALAJI OIL MILL",
+  "rkep": "RADHA KRISHNA ENTERPRISES",
+  "gni": "GHAJANAND INDUSTRIES",
+  "lvi": "LAXMI VENKATESHWARA INDUSTRIES",
+  "lkt": "LAXMI KRISHNA TRADERS",
+  "slstc": "SRI LAXMI SRINIVASA TRADING COMPANY",
+  "srd": "SREE RAM DECORDIGATOR",
+  "rtc": "RADHIKA TRADING COMPANY",
+  "ai": "AAMINA INDUSTRIES",
+  "noi": "NOOR INDUSTRIES",
+  "ki": "KADHRI INDUSTRIES",
+  "pi": "PRAVEEN INDUSTRIES",
+  "lvtc": "LAXMI VENTAKESHWARA TRADING COMPANY",
+  "vltc": "VARALAXMI TRADING COMPANY",
+  "ttc": "TIRUMALA TRADING COMPANY",
+  "ptc": "PAVAN TRADING COMPANY",
+  "gt": "GOKUL TRADERS",
+  "ksg": "K SRIKANTH GUPTHA",
+  "ht": "HARSHITA TRADERS",
+  "vt": "VENKATESHWARA INDUSTRIES",
+  "krk": "KALAKONDA RAJESH KUMAR",
+  "vptc": "VAYUPUTRA TRADING COMPANY",
+  "svri": "SRI VENKATARAMANA INDUSTRIES",
+  "sri": "SADGURU RAGHAVENDRA INDUSTRIES",
+  "ni": "NARESH INDUSTRIES",
+  "srgt": "SRINIVAS RICE GRAIN TRADERS",
+  "vst": "VENKATA SAI TRADERS",
+  "skom": "SRI KRISHNA OIL MILL"
+};
+
+const getFullTraderName = (name) => {
+  if (!name) return "";
+  const cleanName = name.trim().toLowerCase();
+  return TRADER_MAP[cleanName] || name.toUpperCase(); // Expands code, or just capitalizes if not found
+};
+
+
 function formatDate(dateStr) {
   if (!dateStr) return dateStr;
   const [y, m, d] = dateStr.split("-");
@@ -37,38 +75,36 @@ function groupBills(entries) {
     const d = e.date || "No Date";
     if (!byDate[d]) byDate[d] = {};
 
-    let rawBill = String(e.bill_no || "0");
-    if (rawBill.includes("-")) rawBill = rawBill.split("-")[1];
+    const bNo = parseInt(e.book_no || 1, 10);
+    // Extract numeric bill_no even if it's a string like "1-2"
+    let bNoRaw = String(e.bill_no || "0");
+    const bNoVal = parseInt(bNoRaw.includes("-") ? bNoRaw.split("-")[1] : bNoRaw, 10);
 
-    // 🔥 Convert trader name to lowercase for case-insensitive grouping
     const normalizedTrader = (e.trader_name || "").toLowerCase();
-    const billKey = `${e.book_no || 1}-${rawBill}_${normalizedTrader}`;
+    // This key is now strictly unique to the Book-Bill AND the Trader
+    const billKey = `${bNo}-${bNoVal}_${normalizedTrader}`;
 
     if (!byDate[d][billKey]) {
       byDate[d][billKey] = {
-        book_no: e.book_no || 1,
-        bill_no: rawBill,
-        trader_name: e.trader_name, // Keep original case for display
+        book_no: bNo,
+        bill_no: bNoVal,
+        trader_name: e.trader_name,
         entries: []
       };
     }
-    
     byDate[d][billKey].entries.push(e);
   });
 
   return Object.entries(byDate)
-    .sort(([a], [b]) => b.localeCompare(a)) // Sort dates newest first
+    .sort(([a], [b]) => b.localeCompare(a)) 
     .map(([date, billsObj]) => {
-      // 🔥 FIX: Sort by Book No FIRST, then by Bill No
       const bills = Object.values(billsObj).sort((a, b) => {
-        const bookA = parseInt(a.book_no, 10) || 1;
-        const bookB = parseInt(b.book_no, 10) || 1;
-        
-        if (bookA !== bookB) {
-          return bookA - bookB; // Sort Books (1 before 2)
-        }
-        // If Books are the same, sort by Bill No (1 before 2 before 100)
-        return parseInt(a.bill_no, 10) - parseInt(b.bill_no, 10);
+        // 1. Sort by Book
+        if (a.book_no !== b.book_no) return a.book_no - b.book_no;
+        // 2. Then by Bill
+        if (a.bill_no !== b.bill_no) return a.bill_no - b.bill_no;
+        // 3. Then by Trader Name to keep them alphabetized
+        return a.trader_name.localeCompare(b.trader_name);
       });
       return { date, bills };
     });
@@ -97,29 +133,32 @@ export default function BazaarBills() {
 const getNextBookAndBillNo = () => {
   if (!entries || entries.length === 0) return { book_no: 1, bill_no: 1 };
 
+  // 1. Find the maximum book number currently in use
   let maxBook = 1;
-
   entries.forEach(item => {
     const b = parseInt(item.book_no, 10);
     if (!isNaN(b) && b > maxBook) maxBook = b;
   });
 
-  // 🔥 FIX: Normalize trader name for comparison
+  // 2. Filter ALL items in that max book, regardless of trader or crop
   const itemsInMaxBook = entries.filter(item => 
-    parseInt(item.book_no, 10) === maxBook || (maxBook === 1 && !item.book_no)
+    parseInt(item.book_no, 10) === maxBook
   );
 
+  // 3. Find the absolute highest bill number inside that book
   let maxBill = 0;
-
   itemsInMaxBook.forEach(item => {
     const bNoStr = String(item.bill_no || "0");
+    // Handle if it was stored as a compound string "1-2" vs raw number "2"
     const bNo = bNoStr.includes("-") ? bNoStr.split("-")[1] : bNoStr;
     const val = parseInt(bNo, 10);
     if (!isNaN(val) && val > maxBill) maxBill = val;
   });
 
+  // 4. If the book hits 100, jump to the next book and reset bill to 1
   if (maxBill >= 100) return { book_no: maxBook + 1, bill_no: 1 };
 
+  // 5. Otherwise, strictly increment the absolute highest bill number by 1
   return { book_no: maxBook, bill_no: maxBill + 1 };
 };
 
@@ -405,7 +444,7 @@ const traderDayBills = freshBazaar.filter(
             <div className="space-y-1.5"><Label className="text-xs">Bill No. <span className="text-destructive">*</span></Label><Input placeholder="Bill no." value={form.bill_no} onChange={(e) => setField("bill_no", e.target.value)} required /></div>
             <div className="space-y-1.5"><Label className="text-xs">Date <span className="text-destructive">*</span></Label><Input type="date" value={form.date} onChange={(e) => setField("date", e.target.value)} required /></div>
             <div className="space-y-1.5"><Label className="text-xs">Trader Name <span className="text-destructive">*</span></Label><Input placeholder="Trader name" value={form.trader_name} onChange={(e) => setField("trader_name", e.target.value)} required /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Farmer Name (Optional)</Label><Input placeholder="Farmer name" value={form.farmer_name} onChange={(e) => setField("farmer_name", e.target.value)} /></div>
+            
             <div className="space-y-1.5">
               <Label className="text-xs">Crop Type <span className="text-destructive">*</span></Label>
               <Select value={form.crop_type} onValueChange={(v) => setField("crop_type", v)}>
@@ -499,7 +538,7 @@ const traderDayBills = freshBazaar.filter(
                             <React.Fragment key={bIdx}>
                               <tr className="bg-primary/5 border-y border-border">
                                 <td colSpan={9} className="px-4 py-2 text-sm font-medium whitespace-nowrap">
-                                  <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {bill.trader_name.toUpperCase()}
+                                  <span className="text-primary font-bold">{bill.book_no} - {bill.bill_no}</span> &nbsp;|&nbsp; {getFullTraderName(bill.trader_name)}
                                 </td>
                               </tr>
                               {cropGroupsArray.map(({ cropName, cropEntries, cropTotal, cropBags }) => (
