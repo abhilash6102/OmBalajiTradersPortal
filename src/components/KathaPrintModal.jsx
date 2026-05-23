@@ -104,7 +104,15 @@ export default function KathaPrintModal({ open, onOpenChange, entries   , getFul
     <h2>OM BALAJI TRADERS — KATHA BOOK (LEDGER)</h2>
     <p class="subtitle">${fromDate || toDate ? `Period: ${fromDate ? formatDate(fromDate) : "start"} to ${toDate ? formatDate(toDate) : "end"}` : "All records"} ${searchTrader ? ` | Trader: ${searchTrader}` : ""} &nbsp;|&nbsp; Traders: ${traderMap.size}</p>`;
 
-    for (const [trader, { credits, debits }] of traderMap.entries()) {
+    for (const [trader, data] of traderMap.entries()) {
+
+  const credits = [...data.credits].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
+
+  const debits = [...data.debits].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
       const totalCredit = credits.reduce((s, c) => s + (c.amount || 0), 0);
       const totalDebit = debits.reduce((s, d) => s + (d.amount || 0), 0);
       const overallGrandTotal = Math.max(totalCredit, totalDebit);
