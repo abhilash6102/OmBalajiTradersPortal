@@ -115,6 +115,7 @@ export default function BazaarPayments() {
 
 const handleConfirmSubmit = async (e) => {
   e.preventDefault();
+  if (!confirmForm.bank || !confirmForm.credited_date) return;
   setLoading(true);
   try {
     const updatedPayment = { 
@@ -217,7 +218,7 @@ const handleUnmark = async (payment) => {
             <div className="space-y-1.5"><Label className="text-xs">Expected Pay Date</Label><Input type="date" value={form.expected_payment_date} onChange={e => setField("expected_payment_date", e.target.value)} className="bg-muted/50 font-mono" /></div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" disabled={loading}><Save className="w-4 h-4 mr-2" />{loading ? "Saving..." : "Save Record"}</Button>
+            <Button type="submit" disabled={loading || !confirmForm.bank || !confirmForm.credited_date}><Save className="w-4 h-4 mr-2" />{loading ? "Saving..." : "Save Record"}</Button>
             <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
           </div>
         </form>
@@ -298,10 +299,10 @@ const handleUnmark = async (payment) => {
       )}
 
       <Dialog open={!!confirmModal} onOpenChange={() => setConfirmModal(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md rounded-2xl p-4 shadow-xl border border-border bg-white">
           <DialogHeader><DialogTitle>Confirm Credited</DialogTitle></DialogHeader>
           <form onSubmit={handleConfirmSubmit} className="space-y-4">
-            <div className="space-y-1.5"><Label className="text-xs">Bank</Label><Select value={confirmForm.bank} onValueChange={(v) => setConfirmForm(p => ({ ...p, bank: v }))} required><SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger><SelectContent>{Object.entries(BANK_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label className="text-xs">Bank</Label><Select value={confirmForm.bank} onValueChange={(v) => setConfirmForm(p => ({ ...p, bank: v }))}><SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger><SelectContent>{Object.entries(BANK_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-1.5"><Label className="text-xs">Credited Date</Label><Input type="date" value={confirmForm.credited_date} onChange={e => setConfirmForm(p => ({ ...p, credited_date: e.target.value }))} required /></div>
             <div className="flex gap-2 pt-2"><Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmModal(null)}>Cancel</Button><Button type="submit" className="flex-1 bg-green-600 text-white" disabled={loading}>Confirm</Button></div>
           </form>
