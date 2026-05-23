@@ -12,6 +12,8 @@ function formatDate(dateStr) {
   return `${d}/${m}/${y}`;
 }
 
+const normalizeName = (name) => name?.trim().toLowerCase();
+
 const TRADER_MAP = {
   "sbom": "SRI BALAJI OIL MILL",
   "rkep": "RADHA KRISHNA ENTERPRISES",
@@ -69,16 +71,28 @@ export default function KathaPrintModal({ open, onOpenChange, entries   , getFul
 
   // Build ledger HTML
   const buildLedgerHTML = () => {
-    const traderMap = new Map();
-    filtered.forEach(e => {
-      if (e.record_type === "credit" || e.record_type === "debit") {
-        const trader = e.trader_name || "Unknown";
-        if (!traderMap.has(trader)) traderMap.set(trader, { credits: [], debits: [] });
-        const group = traderMap.get(trader);
-        if (e.record_type === "credit") group.credits.push(e);
-        else group.debits.push(e);
-      }
-    });
+const traderMap = new Map();
+
+filtered.forEach(e => {
+  if (e.record_type === "credit" || e.record_type === "debit") {
+
+    const key = normalizeName(e.trader_name) || "unknown";
+    const displayName = e.trader_name || "Unknown";
+
+    if (!traderMap.has(key)) {
+      traderMap.set(key, {
+        displayName,
+        credits: [],
+        debits: []
+      });
+    }
+
+    const group = traderMap.get(key);
+
+    if (e.record_type === "credit") group.credits.push(e);
+    else group.debits.push(e);
+  }
+});
 
     let html = `<!DOCTYPE html><html><head><meta charset="UTF-8" /><title>Katha Book</title>
     <style>
@@ -104,7 +118,7 @@ export default function KathaPrintModal({ open, onOpenChange, entries   , getFul
     <h2>OM BALAJI TRADERS — KATHA BOOK (LEDGER)</h2>
     <p class="subtitle">${fromDate || toDate ? `Period: ${fromDate ? formatDate(fromDate) : "start"} to ${toDate ? formatDate(toDate) : "end"}` : "All records"} ${searchTrader ? ` | Trader: ${searchTrader}` : ""} &nbsp;|&nbsp; Traders: ${traderMap.size}</p>`;
 
-    for (const [trader, data] of traderMap.entries()) {
+    for (const [key, data] of traderMap.entries()) {
 
   const credits = [...data.credits].sort(
     (a, b) => new Date(a.date) - new Date(b.date)
@@ -119,7 +133,7 @@ export default function KathaPrintModal({ open, onOpenChange, entries   , getFul
       const balanceDiff = Math.abs(totalCredit - totalDebit);
       const maxRows = Math.max(credits.length, debits.length);
 
-      html += `<div class="trader-block"><div class="trader-title">${getFullTraderName(trader)}</div><div class="two-columns">`;
+      html += `<div class="trader-block"><div class="trader-title">${getFullTraderName(data.displayName)}</div><div class="two-columns">`;
 
       // Credit column
       html += `<div class="column"><div class="credit-header">CREDIT — Payments Received</div><table><thead><tr><th>Bill No</th><th>Date</th><th class="text-right">Amount (₹)</th></tr></thead><tbody>`;
