@@ -49,7 +49,7 @@ const TRADER_MAP = {
   "vst": "VENKATA SAI TRADERS",
   "skom": "SRI KRISHNA OIL MILL"
 };
-
+const normalizeName = (name) => name?.trim().toLowerCase();
 const getFullTraderName = (name) => {
   if (!name) return "";
   const cleanName = name.trim().toLowerCase();
@@ -88,9 +88,12 @@ export default function KathaBook() {
 
   useEffect(() => {
     const initial = {};
-    entries.forEach(e => {
-      if (e.trader_name) initial[e.trader_name] = true;
-    });
+entries.forEach(e => {
+  if (e.trader_name) {
+    const key = normalizeName(e.trader_name);
+    initial[key] = true;   // CLOSED BY DEFAULT
+  }
+});
     setCollapsedTraders(initial);
   }, [entries]);
 
@@ -221,20 +224,34 @@ const commissionEntries = Object.entries(commGroups)
     ];
   })
   .filter(Boolean)
-  .sort(([a], [b]) => b.localeCompare(a));
+  .sort(([a], [b]) => a.localeCompare(b));
 
   
   // TRADER LEDGER GROUPING LOGIC
   const traderRecords = entries.filter(e => e.record_type !== "commission");
-  const filteredTraders = traderRecords.filter(t => !searchFilter || t.trader_name?.toLowerCase().includes(searchFilter.toLowerCase()));
+  const filteredTraders = traderRecords.filter(t => !searchFilter || normalizeName(t.trader_name)?.includes(searchFilter.toLowerCase()));
   
-  const traderGroups = {};
-  filteredTraders.forEach(e => {
-    const tName = e.trader_name || "Unknown Trader";
-    if (!traderGroups[tName]) traderGroups[tName] = { credits: [], debits: [] };
-    if (e.record_type === "credit") traderGroups[tName].credits.push(e);
-    if (e.record_type === "debit") traderGroups[tName].debits.push(e);
-  });
+const traderGroups = {};
+
+filteredTraders.forEach(e => {
+  const key = normalizeName(e.trader_name) || "unknown";
+
+  if (!traderGroups[key]) {
+    traderGroups[key] = {
+      name: e.trader_name?.trim() || "", // display name
+      credits: [],
+      debits: []
+    };
+  }
+
+  if (e.record_type === "credit") {
+    traderGroups[key].credits.push(e);
+  }
+
+  if (e.record_type === "debit") {
+    traderGroups[key].debits.push(e);
+  }
+});
   const traderLedgerEntries = Object.entries(traderGroups).sort(([a], [b]) => a.localeCompare(b));
 
   const toggleTrader = (key) => setCollapsedTraders(p => ({ ...p, [key]: !p[key] }));
@@ -311,7 +328,7 @@ const commissionEntries = Object.entries(commGroups)
 
           {traderLedgerEntries.length === 0 && <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm shadow-sm">No trader ledger records found.</div>}
 
-          {traderLedgerEntries.map(([tName, records]) => {
+          {traderLedgerEntries.map(([key, records]) => {
             const sortedCredits = [...records.credits].sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0));
             const sortedDebits = [...records.debits].sort((a, b) => (a.sl_no || 0) - (b.sl_no || 0));
             const totalCredit = sortedCredits.reduce((s, c) => s + (Number(c.amount) || 0), 0);
@@ -321,13 +338,13 @@ const commissionEntries = Object.entries(commGroups)
             const balanceDiff = Math.abs(totalCredit - totalDebit);
 
             return (
-              <div key={tName} className="mb-5">
-                <button type="button" onClick={() => toggleTrader(tName)} className="flex items-center gap-2 mb-2 w-full text-left font-bold text-primary text-lg">
-                  {collapsedTraders[tName] ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  <span className="uppercase tracking-wide font-semibold text-primary text-sm">{getFullTraderName(tName)}</span>
+              <div key={key} className="mb-5">
+                <button type="button" onClick={() => toggleTrader(key)} className="flex items-center gap-2 mb-2 w-full text-left font-bold text-primary text-lg">
+                  {collapsedTraders[key] ? <ChevronRight className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  <span className="uppercase tracking-wide font-semibold text-primary text-sm">{getFullTraderName(records.name?.trim())}</span>
                 </button>
 
-                {!collapsedTraders[tName] && (
+                {!collapsedTraders[key] && (
                   <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
                       
@@ -468,7 +485,7 @@ const commissionEntries = Object.entries(commGroups)
 
           {commissionEntries.map(([sortKey, monthData]) => {
             // Sort dates descending for day-to-day layout
-            const dayEntries = Object.entries(monthData.days).sort(([a], [b]) => b.localeCompare(a));
+            const dayEntries = Object.entries(monthData.days).sort(([a], [b]) => a.localeCompare(b));
             const monthTotal = dayEntries.reduce((s, [_, amt]) => s + amt, 0);
             const count = dayEntries.length;
 

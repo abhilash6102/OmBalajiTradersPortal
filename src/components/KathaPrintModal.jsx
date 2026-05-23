@@ -168,7 +168,7 @@ const buildCommissionHTML = () => {
   });
 
   // Sort months newest first
-  const sortedMonths = Array.from(monthGroups.keys()).sort().reverse();
+  const sortedMonths = Array.from(monthGroups.keys()).sort();
 
   let overallTotal = 0;
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8" /><title>Katha Book</title>
@@ -225,20 +225,40 @@ const buildCommissionHTML = () => {
   return html;
 };
 
-  const handlePrint = () => {
-    if (filtered.length === 0) {
-      alert("No records to print for the selected criteria.");
-      return;
-    }
-    const html = printType === "ledger" ? buildLedgerHTML() : buildCommissionHTML();
-    const printWin = window.open("", "_blank", "width=1100,height=800");
-    if (!printWin) {
-      alert("Popup blocked. Please allow popups for this site.");
-      return;
-    }
-    printWin.document.write(html);
-    printWin.document.close();
+const handlePrint = () => {
+  if (filtered.length === 0) {
+    alert("No records to print for the selected criteria.");
+    return;
+  }
+
+  const html = printType === "ledger"
+    ? buildLedgerHTML()
+    : buildCommissionHTML();
+
+  // Create hidden iframe
+  let iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+
+  document.body.appendChild(iframe);
+
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+
+  iframe.onload = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1000);
   };
+};
 
   const ledgerCount = entries.filter(e => e.record_type !== "commission").length;
   const commissionCount = entries.filter(e => e.record_type === "commission").length;

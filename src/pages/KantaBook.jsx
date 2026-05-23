@@ -713,7 +713,7 @@ if (existingKathaDebit) {
               <Input type="number" step="any" placeholder="0" value={form.kgs === "" ? "" : form.kgs} onChange={(e) => setField("kgs", e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Bazaar Bags <span className="text-accent font-semibold">★</span></Label>
+              <Label className="text-xs">Bazaar Bags <span className="text-destructive">*</span></Label>
               <Input type="number" placeholder="Bazaar bags" value={form.bazaar} onChange={(e) => setField("bazaar", e.target.value)} />
             </div>
             <div className="space-y-1.5">
