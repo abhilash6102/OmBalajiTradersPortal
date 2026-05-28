@@ -10,7 +10,7 @@ import PageHeader from "../components/PageHeader";
 
 const BAG_WEIGHTS = { "none": 0, "30kgs": 30, "35kgs": 35, "49kgs": 49, "59kgs": 59, "60kgs": 60 };
 const BAG_TYPE_OPTIONS = Object.keys(BAG_WEIGHTS);
-const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Wheat","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
+const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Jowar","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
 
 const HAMALI_RATE = (bagType) => (bagType === "59kgs" || bagType === "60kgs") ? 12.38 : 11.52;
 const DHARVAY_RATE = 5.15;
@@ -178,8 +178,10 @@ if (!finalSlNo) finalSlNo = 1;
       // 2. Save TakPatti
       const takRes = await fetch(`${API_BASE_URL}/takpatti`);
       const takPattiAll = await takRes.json();
-      const matchingTP = takPattiAll.find(tp => Number(tp.sl_no) === Number(finalSlNo) && Number(tp.book_no || 1) === Number(finalBookNo));
-      
+const matchingTP = takPattiAll.find(tp =>
+  String(tp.kanta_entry_id) === String(savedKantaId)
+);
+
       const tpData = {
         kanta_entry_id: savedKantaId,
         book_no: finalBookNo, sl_no: finalSlNo, date: form.date, farmer_name: form.farmer_name, 
@@ -201,8 +203,11 @@ if (!finalSlNo) finalSlNo = 1;
       // 3. Save Padam Credit (Farmer)
       const padamRes1 = await fetch(`${API_BASE_URL}/padam`);
       const padamAll1 = await padamRes1.json();
-      const existingCredit = padamAll1.find(p => p.type === "credit" && Number(p.sl_no) === Number(finalSlNo) && Number(p.book_no || 1) === Number(finalBookNo));
-      
+      const existingCredit = padamAll1.find(p =>
+        p.type === "credit" &&
+        String(p.kanta_entry_id) === String(savedKantaId)
+      );
+
       const creditData = {
         kanta_entry_id: savedKantaId,
         book_no: finalBookNo, sl_no: finalSlNo, date: form.date, type: "credit", 
@@ -291,9 +296,9 @@ if (existingBill) {
         sub_total: bbNet, net_amount: bbNet, total_amount: bbNet
       };
 
-      const existingBBRecord = bazaarAll.find(b => 
-        Number(b.kanta_sl_no) === Number(finalSlNo) && b.date === form.date && b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase()
-      );
+const existingBBRecord = bazaarAll.find(b => 
+  String(b.kanta_entry_id) === String(savedKantaId)
+);
 
       if (existingBBRecord) {
         await fetch(`${API_BASE_URL}/bazaarbills/${existingBBRecord._id || existingBBRecord.id}`, {
@@ -317,7 +322,9 @@ if (existingBill) {
       const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
       const bpAll = await bpRes.json();
       
-      const existingBP = bpAll.find(bp => bp.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && bp.crop_type === crop && bp.crop_date === form.date);
+      const existingBP = bpAll.find(bp =>
+        String(bp.kanta_entry_id) === String(savedKantaId)
+      );
 
       const expDate = new Date(form.date);
       expDate.setDate(expDate.getDate() + (crop === "Castor Seeds" ? 10 : 20));
@@ -346,9 +353,8 @@ const padamAll2 = await padamRes2.json();
 
 // Find existing debit entry for this specific bazaar bill (book_no + sl_no)
 const existingDebit = padamAll2.find(p => 
-  p.type === "debit" && 
-  p.book_no === uBook && 
-  p.sl_no === uBill
+  p.type === "debit" &&
+  String(p.kanta_entry_id) === String(savedKantaId)
 );
 
 const debitData = {
@@ -392,9 +398,8 @@ try {
 
 // 1) DEBIT SIDE – group by bazaar bill number, not by kanta_entry_id
 const existingKathaDebit = kathaAll.find(
-  k => k.record_type === "debit" && 
-       k.book_no === uBook && 
-       k.sl_no === uBill
+  k => k.record_type === "debit" &&
+       String(k.kanta_entry_id) === String(savedKantaId)
 );
 
 const kDebitPayload = {

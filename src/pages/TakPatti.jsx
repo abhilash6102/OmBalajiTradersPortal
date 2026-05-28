@@ -11,7 +11,7 @@ import StatCard from "../components/StatCard";
 
 const BAG_WEIGHTS = { "30kgs": 30, "35kgs": 35, "49kgs": 49, "59kgs": 59, "60kgs": 60 };
 const BAG_TYPE_OPTIONS = Object.keys(BAG_WEIGHTS);
-const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Wheat","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
+const CROP_OPTIONS = ["Maize", "Paddy", "Ground Nut", "Red Gram", "Black Gram", "Ragi", "Lobia","Jowar","Neem Seeds", "Cotton", "Castor Seeds","SunFlower Seeds"];
 
 const HAMALI_RATE = (bagType) => (bagType === "59kgs" || bagType === "60kgs") ? 12.38 : 11.52;
 const DHARVAY_RATE = 5.15;
@@ -486,7 +486,7 @@ export default function TakPatti() {
                             <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                               Book - Sl.No
                             </th>
-                            {["Date","Trader","Farmer",  "Village", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
+                            {["Date","Farmer",  "Village","Trader", "Crop", "Bag Type", "Bags", "Kgs", "Quintals", "Left Kgs", "Price/Unit", "Sum (₹)", "Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)", ""].map(h => {
                               const isCentered = h === "Crop" || h === "Sum (₹)";
                               const isMoney = ["Commission", "Hamali", "Dharvay", "Chata", "Deductions", "Net Pay (₹)"].includes(h);
 
@@ -510,9 +510,9 @@ export default function TakPatti() {
                               <tr key={row._id || row.id} onClick={() => handleEdit(row)} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors">
                                 <td className="px-3 py-3 text-muted-foreground font-semibold whitespace-nowrap"><span className="text-primary">{row.book_no || 1}</span> - {row.sl_no ?? "—"}</td>
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{formatDate(row.date) || "—"}</td>
-                                <td className="px-3 py-3 text-center whitespace-nowrap font-medium text-muted-foreground">{(row.trader_name || "").toUpperCase()}</td>
                                 <td className="px-3 py-3 font-medium whitespace-nowrap">{row.farmer_name}</td>
                                 <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{row.village}</td>
+                                <td className="px-3 py-3 text-center whitespace-nowrap font-medium text-muted-foreground">{(row.trader_name || "").toUpperCase()}</td>
                                 <td className="px-3 py-3 text-center whitespace-nowrap">{row.crop_type || "—"}</td>
                                 <td className="px-3 py-3 text-center whitespace-nowrap">{row.bag_type || "—"}</td>
                                 <td className="px-3 py-3 text-center font-mono whitespace-nowrap">{row.bags ?? "—"}</td>
