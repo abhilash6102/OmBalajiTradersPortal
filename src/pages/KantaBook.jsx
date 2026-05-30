@@ -323,7 +323,9 @@ const existingBBRecord = bazaarAll.find(b =>
       const bpAll = await bpRes.json();
       
       const existingBP = bpAll.find(bp =>
-        String(bp.kanta_entry_id) === String(savedKantaId)
+        bp.crop_date === form.date &&
+        bp.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() &&
+        bp.crop_type === crop
       );
 
       const expDate = new Date(form.date);
@@ -354,7 +356,11 @@ const padamAll2 = await padamRes2.json();
 // Find existing debit entry for this specific bazaar bill (book_no + sl_no)
 const existingDebit = padamAll2.find(p => 
   p.type === "debit" &&
-  String(p.kanta_entry_id) === String(savedKantaId)
+  p.date === form.date &&
+  p.book_no === uBook && 
+  p.sl_no === uBill &&
+  p.party_name?.toLowerCase() === form.trader_name?.toLowerCase() &&
+  p.crop_type === crop
 );
 
 const debitData = {
@@ -399,7 +405,9 @@ try {
 // 1) DEBIT SIDE – group by bazaar bill number, not by kanta_entry_id
 const existingKathaDebit = kathaAll.find(
   k => k.record_type === "debit" &&
-       String(k.kanta_entry_id) === String(savedKantaId)
+        k.date === form.date &&
+        k.book_no === uBook && 
+        k.sl_no === uBill
 );
 
 const kDebitPayload = {
@@ -718,13 +726,14 @@ if (existingKathaDebit) {
               <Input type="number" step="any" placeholder="0" value={form.kgs === "" ? "" : form.kgs} onChange={(e) => setField("kgs", e.target.value)} />
             </div>
             <div className="space-y-1.5">
+              <Label className="text-xs">Price / Unit (₹) <span className="text-destructive">*</span></Label>
+              <Input type="number" step="any" placeholder="0.00" value={form.price_per_unit} onChange={(e) => setField("price_per_unit", e.target.value)} required />
+            </div>            
+            <div className="space-y-1.5">
               <Label className="text-xs">Bazaar Bags <span className="text-destructive">*</span></Label>
               <Input type="number" placeholder="Bazaar bags" value={form.bazaar} onChange={(e) => setField("bazaar", e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Price / Unit (₹) <span className="text-destructive">*</span></Label>
-              <Input type="number" step="any" placeholder="0.00" value={form.price_per_unit} onChange={(e) => setField("price_per_unit", e.target.value)} required />
-            </div>
+
             <div className="space-y-1.5">
               <Label className="text-xs">Trader Name <span className="text-destructive">*</span></Label>
               <Input placeholder="Trader name" value={form.trader_name} onChange={(e) => setField("trader_name", e.target.value)} required />
