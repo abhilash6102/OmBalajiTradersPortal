@@ -384,7 +384,18 @@ export default function TakPatti() {
     (!cropFilter || e.crop_type?.toLowerCase().includes(cropFilter.toLowerCase()))
   );
 
-  const grouped = groupByDate(filtered).map(([dateKey, rows]) => [ dateKey, [...rows].sort((a, b) => (a.sl_no ?? 999) - (b.sl_no ?? 999)) ]);
+const grouped = groupByDate(filtered).map(([dateKey, rows]) => [
+  dateKey,
+  [...rows].sort((a, b) => {
+    const bookDiff = (a.book_no || 1) - (b.book_no || 1);
+
+    if (bookDiff !== 0) {
+      return bookDiff;
+    }
+
+    return (a.sl_no || 0) - (b.sl_no || 0);
+  })
+]);
   
   const totalGross = filtered.reduce((s, e) => s + (e.sum_amount || 0), 0);
   const totalDeductions = filtered.reduce((s, e) => s + (e.commission || 0) + (e.hamali || 0) + (e.dharvay || 0) + (e.chata || 0), 0);

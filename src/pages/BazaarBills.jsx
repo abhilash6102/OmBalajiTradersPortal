@@ -98,14 +98,24 @@ function groupBills(entries) {
   return Object.entries(byDate)
     .sort(([a], [b]) => b.localeCompare(a)) 
     .map(([date, billsObj]) => {
-      const bills = Object.values(billsObj).sort((a, b) => {
-        // 1. Sort by Book
-        if (a.book_no !== b.book_no) return a.book_no - b.book_no;
-        // 2. Then by Bill
-        if (a.bill_no !== b.bill_no) return a.bill_no - b.bill_no;
-        // 3. Then by Trader Name to keep them alphabetized
-        return a.trader_name.localeCompare(b.trader_name);
-      });
+const bills = Object.values(billsObj).map(bill => {
+  // 🔥 SORT ENTRIES INSIDE BILL (IMPORTANT FIX)
+  bill.entries.sort((a, b) => {
+    // If you have createdAt → use it (BEST)
+    if (a.createdAt && b.createdAt) {
+      return new Date(a.createdAt) - new Date(b.createdAt); // OLD → NEW
+    }
+
+    // Fallback: use id
+    return (a._id || a.id) > (b._id || b.id) ? 1 : -1;
+  });
+
+  return bill;
+}).sort((a, b) => {
+  if (a.book_no !== b.book_no) return a.book_no - b.book_no;
+  if (a.bill_no !== b.bill_no) return a.bill_no - b.bill_no;
+  return a.trader_name.localeCompare(b.trader_name);
+});
       return { date, bills };
     });
 }

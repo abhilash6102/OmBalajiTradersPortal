@@ -407,7 +407,7 @@ const existingKathaDebit = kathaAll.find(
   k => k.record_type === "debit" &&
         k.date === form.date &&
         k.book_no === uBook && 
-        k.sl_no === uBill
+        k.sl_no === uBill
 );
 
 const kDebitPayload = {
