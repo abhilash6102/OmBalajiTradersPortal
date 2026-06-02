@@ -298,7 +298,7 @@ export default function Traders() {
 
             {/* 🔥 MAIN FIX HERE */}
             <td className="px-4 py-2 whitespace-nowrap">
-              <div className="truncate max-w-[250px] sm:max-w-none">
+              <div className="truncate max-w-[344px] sm:max-w-none">
                 {row.name.toUpperCase()}
               </div>
             </td>

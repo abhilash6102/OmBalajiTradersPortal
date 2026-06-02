@@ -26,20 +26,20 @@ const TRADER_MAP = {
   "lvi": "LAXMI VENKATESHWARA INDUSTRIES",
   "lkt": "LAXMI KRISHNA TRADERS",
   "slstc": "SRI LAXMI SRINIVASA TRADING COMPANY",
-  "srd": "SREE RAM DECORDIGATOR",
+  "srd": "SRI RAMA DECORDIGATOR",
   "rtc": "RADHIKA TRADING COMPANY",
   "ai": "AAMINA INDUSTRIES",
   "noi": "NOOR INDUSTRIES",
   "ki": "KADHRI INDUSTRIES",
   "pi": "PRAVEEN INDUSTRIES",
-  "lvtc": "LAXMI VENTAKESHWARA TRADING COMPANY",
+  "lvtc": "LAXMI VENTAKESHWARA TRADING CORPORATION",
   "vltc": "VARALAXMI TRADING COMPANY",
   "ttc": "TIRUMALA TRADING COMPANY",
   "ptc": "PAVAN TRADING COMPANY",
   "gt": "GOKUL TRADERS",
   "ksg": "K SRIKANTH GUPTHA",
   "ht": "HARSHITA TRADERS",
-  "vt": "VENKATESHWARA INDUSTRIES",
+  "vt": "VENKATESHWARA TRADERS",
   "krk": "KALAKONDA RAJESH KUMAR",
   "vptc": "VAYUPUTRA TRADING COMPANY",
   "svri": "SRI VENKATARAMANA INDUSTRIES",
@@ -204,12 +204,14 @@ const commissionEntries = Object.entries(commGroups)
       const formatted = formatDate(dateKey); // dd/mm/yyyy
       const raw = dateKey; // yyyy-mm-dd
       const monthLabel = monthData.label.toLowerCase();
+      const year = raw.split("-")[0];
       const search = searchFilter.toLowerCase();
 
       return (
         formatted.includes(search) ||
         raw.includes(search) ||
-        monthLabel.includes(search)
+        monthLabel.includes(search) ||
+        year.includes(search)
       );
     });
 
@@ -260,12 +262,6 @@ filteredTraders.forEach(e => {
   return (
     <div className="pb-20">
       <PageHeader title="Katha Book" subtitle="Trader account ledgers & daily commissions">
-        {/* {!showForm && (
-          <Button onClick={handleAddNew}>
-            <Plus className="w-4 h-4 mr-2" /> New Ledger Entry
-          </Button>
-          
-        )} */}
         <div className="flex gap-2">
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" /> 
@@ -322,8 +318,8 @@ filteredTraders.forEach(e => {
       {/* CONTENT: TRADERS LEDGER */}
       {!showForm && activeTab === "traders" && (
         <>
-          <div className="mb-4 relative max-w-sm">
-            <Input placeholder="Search Trader..." value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="pl-4" />
+          <div className="flex flex-wrap gap-2 mb-6">
+            <Input placeholder=" Trader Name" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className=" w-25" />
           </div>
 
           {traderLedgerEntries.length === 0 && <div className="bg-card rounded-xl border border-border py-14 text-center text-muted-foreground text-sm shadow-sm">No trader ledger records found.</div>}
@@ -471,10 +467,10 @@ filteredTraders.forEach(e => {
         <>
         <div className="mb-4 relative max-w-sm">
           <Input 
-            placeholder="Search Month or Date..." 
+            placeholder="Day, Month or Year" 
             value={searchFilter} 
             onChange={(e) => setSearchFilter(e.target.value)} 
-            className="pl-4" 
+            className="w-30" 
           />
         </div>
           {commissionEntries.length === 0 && (

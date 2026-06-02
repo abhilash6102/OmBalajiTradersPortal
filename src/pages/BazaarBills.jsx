@@ -31,20 +31,20 @@ const TRADER_MAP = {
   "lvi": "LAXMI VENKATESHWARA INDUSTRIES",
   "lkt": "LAXMI KRISHNA TRADERS",
   "slstc": "SRI LAXMI SRINIVASA TRADING COMPANY",
-  "srd": "SREE RAM DECORDIGATOR",
+  "srd": "SRI RAMA DECORDIGATOR",
   "rtc": "RADHIKA TRADING COMPANY",
   "ai": "AAMINA INDUSTRIES",
   "noi": "NOOR INDUSTRIES",
   "ki": "KADHRI INDUSTRIES",
   "pi": "PRAVEEN INDUSTRIES",
-  "lvtc": "LAXMI VENTAKESHWARA TRADING COMPANY",
+  "lvtc": "LAXMI VENTAKESHWARA TRADING CORPORATION",
   "vltc": "VARALAXMI TRADING COMPANY",
   "ttc": "TIRUMALA TRADING COMPANY",
   "ptc": "PAVAN TRADING COMPANY",
   "gt": "GOKUL TRADERS",
   "ksg": "K SRIKANTH GUPTHA",
   "ht": "HARSHITA TRADERS",
-  "vt": "VENKATESHWARA INDUSTRIES",
+  "vt": "VENKATESHWARA TRADERS",
   "krk": "KALAKONDA RAJESH KUMAR",
   "vptc": "VAYUPUTRA TRADING COMPANY",
   "svri": "SRI VENKATARAMANA INDUSTRIES",
@@ -244,16 +244,18 @@ const getNextBookAndBillNo = () => {
       const freshBazaarRes = await fetch(`${API_BASE_URL}/bazaarbills`);
       const freshBazaar = await freshBazaarRes.json();
 const traderDayBills = freshBazaar.filter(
-  b => b.trader_name?.toLowerCase() === form.trader_name?.toLowerCase() && 
-       b.crop_type === form.crop_type && 
-       b.date === form.date
+  b => b.book_no === finalBookNo &&
+       b.bill_no === finalBillNo &&
+       b.trader_name === form.trader_name
 );
       const dayTotal = traderDayBills.reduce((s, b) => s + (Number(b.sub_total) || Number(b.net_amount) || 0), 0);
 
       const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
       const bpAll = await bpRes.json();
       const existingBP = bpAll.find(
-        bp => bp.trader_name === form.trader_name && bp.crop_type === form.crop_type && bp.crop_date === form.date
+        bp => bp.book_no === finalBookNo &&
+bp.sl_no === finalBillNo &&
+bp.trader_name === form.trader_name
       );
 
       const expDate = new Date(form.date);
@@ -285,9 +287,8 @@ const traderDayBills = freshBazaar.filter(
       const padamAll = await padamRes.json();
       const existingDebit = padamAll.find(
         p => p.type === "debit" &&
-          p.party_name === form.trader_name &&
-          p.crop_type === form.crop_type &&
-          p.date === form.date
+p.book_no === finalBookNo &&
+p.sl_no === finalBillNo
       );
 
       if (existingDebit) {
@@ -358,21 +359,19 @@ const traderDayBills = freshBazaar.filter(
       
       const dayTotal = remainingBills
         .filter(b =>
-          b.trader_name === trader_name &&
-          b.crop_type === crop_type &&
-          b.date === date
+b.book_no === bill.book_no &&
+b.bill_no === bill.bill_no
         )
         .reduce((s, b) => s + (Number(b.sub_total || b.net_amount || b.total_amount || 0)), 0);
 
       const padamRes = await fetch(`${API_BASE_URL}/padam`);
       const padamAll = await padamRes.json();
 
-      const debit = padamAll.find(p =>
-        p.type === "debit" &&
-        p.party_name === trader_name &&
-        p.crop_type === crop_type &&
-        p.date === date
-      );
+const debit = padamAll.find(p =>
+  p.type === "debit" &&
+  p.book_no === bill.book_no &&
+  p.sl_no === bill.bill_no
+);
 
       if (debit) {
         if (dayTotal > 0) {
@@ -395,11 +394,11 @@ const traderDayBills = freshBazaar.filter(
       const bpRes = await fetch(`${API_BASE_URL}/bazaarpayments`);
       const bpAll = await bpRes.json();
 
-      const payment = bpAll.find(p =>
-        p.trader_name === trader_name &&
-        p.crop_type === crop_type &&
-        p.crop_date === date
-      );
+const payment = bpAll.find(p =>
+  p.book_no === bill.book_no &&
+  p.sl_no === bill.bill_no &&
+  p.trader_name === bill.trader_name
+);
 
       if (payment) {
         if (dayTotal > 0) {

@@ -61,6 +61,7 @@ export default function Padam() {
   const [loading, setLoading] = useState(false);
   const [collapsedDates, setCollapsedDates] = useState({});
   const [allData, setAllData] = useState([]);
+  const [dateFilter, setDateFilter] = useState("");
 
 const load = async () => {
   try {
@@ -171,9 +172,17 @@ const setField = async (key, value) => {
     try { await fetch(`${API_BASE_URL}/padam/${id}`, { method: "DELETE" }); load(); } catch (err) { console.error("Delete failed", err); }
   };
 
-  const filtered = entries.filter(e =>
-    !search || [e.party_name, e.village, e.crop_type].some(f => f?.toLowerCase().includes(search.toLowerCase()))
-  );
+const filtered = entries.filter(e => {
+  const matchSearch =
+    !search ||
+    [e.party_name, e.village, e.crop_type]
+      .some(f => f?.toLowerCase().includes(search.toLowerCase()));
+
+  const matchDate =
+    !dateFilter || (e.date && e.date.split("T")[0] === dateFilter);
+
+  return matchSearch && matchDate;
+});
 
   const grouped = groupByDate(filtered);
 
@@ -204,12 +213,15 @@ const setField = async (key, value) => {
             <StatCard title="Overall Difference" value={`₹${formatMoney(currentBalance)}`} icon={CreditCard} />
           </div>
 
-          <div className="mb-6">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search Name, Village, Crop..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <div className="flex flex-wrap gap-2 mb-6">
+              <Input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-44"
+                />
+              <Input placeholder="Farmer, Village, Crop or Trader" value={search} onChange={(e) => setSearch(e.target.value)} className="w-60" />
             </div>
-          </div>
         </>
       )}
 

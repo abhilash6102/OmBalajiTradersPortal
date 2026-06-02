@@ -227,9 +227,10 @@ const handleUnmark = async (payment) => {
       {!showForm && (
         <>
           <div className="flex flex-wrap gap-2 mb-6">
+            <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-44" />
             <Input placeholder="Trader name..." value={searchTrader} onChange={(e) => setSearchTrader(e.target.value)} className="w-44" />
             <Input placeholder="Amount..." type="number" value={searchAmount} onChange={(e) => setSearchAmount(e.target.value)} className="w-32" />
-            <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-44" />
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent>
